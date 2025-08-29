@@ -4,10 +4,12 @@
 
 ## 🚀 一键启动
 ```bash
-docker run -d -p 7070:7070 zhong12138/lanshare:latest
+docker run -d -p 7070:7070 -e HOST_IP=192.168.1.100 zhong12138/lanshare:latest
 ```
 
 打开 http://localhost:7070 即刻使用！
+
+**注意**: 将 `192.168.1.100` 替换为你的局域网IP地址，确保其他设备能正确访问。
 
 ## ✨ 核心特性
 - 🎯 **零配置** - 打开即用，无需设置
@@ -29,8 +31,14 @@ services:
     volumes:
       - ./uploads:/app/uploads
       - ./data:/app/data
+    environment:
+      - HOST_IP=192.168.1.100  # 替换为你的局域网IP
     restart: unless-stopped
 ```
+
+### 查找局域网IP
+- **Windows**: `ipconfig` 查看IPv4地址
+- **Mac/Linux**: `ifconfig` 或 `ip addr` 查看局域网IP
 
 ## 💾 数据存储
 - **上传文件**: `./uploads/` 目录

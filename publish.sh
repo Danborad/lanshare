@@ -5,36 +5,35 @@
 set -e
 
 # 配置变量
-DOCKERHUB_USERNAME="${DOCKERHUB_USERNAME:-your-dockerhub-username}"
+DOCKERHUB_USERNAME="${DOCKERHUB_USERNAME:-zhong12138}"
 IMAGE_NAME="lanshare"
 VERSION="${1:-latest}"
 
 # 检查Docker是否安装
 if ! command -v docker &> /dev/null; then
-    echo "❌ Docker 未安装，请先安装 Docker"
+    echo "�?Docker 未安装，请先安装 Docker"
     exit 1
 fi
 
 # 检查是否已登录Docker Hub
 if ! docker info | grep -q "Username"; then
-    echo "❌ 请先登录 Docker Hub:"
+    echo "�?请先登录 Docker Hub:"
     echo "   docker login"
     exit 1
 fi
 
-echo "🚀 开始构建 LanShare Docker 镜像..."
+echo "🚀 开始构�?LanShare Docker 镜像..."
 
 # 构建镜像
 echo "📦 构建 Docker 镜像..."
 docker build -t ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${VERSION} .
 docker build -t ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest .
 
-# 推送镜像
-echo "🚀 推送镜像到 Docker Hub..."
+# 推送镜�?echo "🚀 推送镜像到 Docker Hub..."
 docker push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${VERSION}
 docker push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest
 
-echo "✅ 发布完成！"
+echo "�?发布完成�?
 echo "📋 镜像地址: ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${VERSION}"
 echo "🔗 Docker Hub: https://hub.docker.com/r/${DOCKERHUB_USERNAME}/${IMAGE_NAME}"
 

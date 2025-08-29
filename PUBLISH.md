@@ -1,25 +1,20 @@
 # 🚀 LanShare 发布指南
 
-## 📦 项目已准备就绪
-
-### ✅ 已完成的配置
+## 📦 项目已准备就�?
+### �?已完成的配置
 
 1. **GitHub 仓库**
-   - ✅ 项目已初始化为Git仓库
-   - ✅ 所有代码已提交（3次提交）
-   - ✅ 包含完整的.gitignore
-   - ✅ GitHub Actions工作流已配置
+   - �?项目已初始化为Git仓库
+   - �?所有代码已提交�?次提交）
+   - �?包含完整�?gitignore
+   - �?GitHub Actions工作流已配置
 
 2. **Docker Hub 配置**
-   - ✅ Dockerfile已优化用于生产环境
-   - ✅ 多阶段构建减小镜像体积
-   - ✅ publish.sh脚本用于发布
-   - ✅ docker-compose-hub.yml用于一键部署
-
+   - �?Dockerfile已优化用于生产环�?   - �?多阶段构建减小镜像体�?   - �?publish.sh脚本用于发布
+   - �?docker-compose-hub.yml用于一键部�?
 3. **文档完善**
-   - ✅ README.md 项目介绍
-   - ✅ DEPLOY.md 一键部署指南
-   - ✅ PUBLISH.md 发布说明
+   - �?README.md 项目介绍
+   - �?DEPLOY.md 一键部署指�?   - �?PUBLISH.md 发布说明
 
 ## 🚀 发布步骤
 
@@ -34,10 +29,9 @@
 
 ```bash
 # 添加远程仓库（替换为你的用户名）
-git remote add origin https://github.com/your-username/lanshare.git
+git remote add origin https://github.com/Danborad/lanshare.git
 
-# 推送代码
-git push -u origin master
+# 推送代�?git push -u origin master
 ```
 
 ### 3. 发布到Docker Hub
@@ -46,25 +40,21 @@ git push -u origin master
 # 登录Docker Hub
 docker login
 
-# 设置用户名
-export DOCKERHUB_USERNAME=your-dockerhub-username
+# 设置用户�?export DOCKERHUB_USERNAME=your-dockerhub-username
 
 # 运行发布脚本
 ./publish.sh v1.0.0
 ```
 
-### 4. 一键部署命令
-
-用户可以直接使用以下命令部署：
-
+### 4. 一键部署命�?
+用户可以直接使用以下命令部署�?
 ```bash
 # 方案1：使用Docker Hub镜像
 mkdir lanshare && cd lanshare
-curl -o docker-compose.yml https://raw.githubusercontent.com/your-username/lanshare/main/docker-compose-hub.yml
+curl -o docker-compose.yml https://raw.githubusercontent.com/Danborad/lanshare/main/docker-compose-hub.yml
 docker-compose up -d
 
-# 方案2：克隆仓库部署
-git clone https://github.com/your-username/lanshare.git
+# 方案2：克隆仓库部�?git clone https://github.com/Danborad/lanshare.git
 cd lanshare
 docker-compose up -d
 ```
@@ -77,10 +67,8 @@ lanshare/
 ├── backend/                              # 后端Flask应用
 ├── frontend/                           # 前端React应用
 ├── uploads/                           # 文件上传目录
-├── data/                              # 数据库目录
-├── Dockerfile                         # Docker镜像构建文件
-├── docker-compose.yml                 # 本地开发配置
-├── docker-compose-hub.yml             # Docker Hub生产配置
+├── data/                              # 数据库目�?├── Dockerfile                         # Docker镜像构建文件
+├── docker-compose.yml                 # 本地开发配�?├── docker-compose-hub.yml             # Docker Hub生产配置
 ├── publish.sh                         # Docker Hub发布脚本
 ├── README.md                          # 项目文档
 ├── DEPLOY.md                          # 部署指南
@@ -89,19 +77,12 @@ lanshare/
 
 ## 🔗 访问地址
 
-- **GitHub**: https://github.com/your-username/lanshare
-- **Docker Hub**: https://hub.docker.com/r/your-username/lanshare
+- **GitHub**: https://github.com/Danborad/lanshare
+- **Docker Hub**: https://hub.docker.com/r/Danborad/lanshare
 - **演示地址**: http://localhost:7070
 
-## 🎯 下一步
-
-1. **创建GitHub仓库**并推送代码
-2. **注册Docker Hub账号**并发布镜像
-3. **更新文档中的用户名**为你的实际用户名
-4. **测试一键部署**确保所有功能正常
-
-## 📞 技术支持
-
-- **GitHub Issues**: 提交bug报告和功能请求
-- **Docker Hub**: 镜像更新和问题反馈
-- **文档**: 完整的部署和使用指南
+## 🎯 下一�?
+1. **创建GitHub仓库**并推送代�?2. **注册Docker Hub账号**并发布镜�?3. **更新文档中的用户�?*为你的实际用户名
+4. **测试一键部�?*确保所有功能正�?
+## 📞 技术支�?
+- **GitHub Issues**: 提交bug报告和功能请�?- **Docker Hub**: 镜像更新和问题反�?- **文档**: 完整的部署和使用指南

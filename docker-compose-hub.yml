@@ -2,8 +2,7 @@ version: '3.8'
 
 services:
   lanshare:
-    image: lanshare/lanshare:latest  # 替换为你的Docker Hub用户名
-    container_name: lanshare-app
+    image: zhong12138/lanshare:latest  # 替换为你的Docker Hub用户�?    container_name: lanshare-app
     ports:
       - "7070:7070"
     volumes:

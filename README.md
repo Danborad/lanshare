@@ -1,38 +1,33 @@
 # LanShare 🚀
 
-一个现代化的局域网文件共享工具，支持实时传输、频道管理和移动端适配。
-
-## ✨ 特性
-
-- 📱 **全平台支持**：桌面端和移动端完美适配
-- ⚡ **实时传输**：WebSocket 实时文件传输
+一个现代化的局域网文件共享工具，支持实时传输、频道管理和移动端适配�?
+## �?特�?
+- 📱 **全平台支�?*：桌面端和移动端完美适配
+- �?**实时传输**：WebSocket 实时文件传输
 - 📂 **频道管理**：支持多频道文件分类
-- 🎨 **现代UI**：深色/浅色主题切换
-- 🐳 **Docker部署**：一键部署，开箱即用
-- 🔒 **本地安全**：纯局域网传输，无需外网
+- 🎨 **现代UI**：深�?浅色主题切换
+- 🐳 **Docker部署**：一键部署，开箱即�?- 🔒 **本地安全**：纯局域网传输，无需外网
 
-## 🚀 一键部署
-
+## 🚀 一键部�?
 ### Docker Compose（推荐）
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/your-username/lanshare.git
+git clone https://github.com/Danborad/lanshare.git
 cd lanshare
 
-# 2. 一键启动
-docker-compose up -d
+# 2. 一键启�?docker-compose up -d
 
 # 3. 访问应用
-# 桌面端: http://localhost:7070
-# 移动端: http://your-ip:7070
+# 桌面�? http://localhost:7070
+# 移动�? http://your-ip:7070
 ```
 
 ### 手动部署
 
 ```bash
 # 1. 下载源码
-git clone https://github.com/your-username/lanshare.git
+git clone https://github.com/Danborad/lanshare.git
 cd lanshare
 
 # 2. 启动服务
@@ -50,8 +45,7 @@ cd lanshare
 ### 环境变量
 
 ```bash
-# 可选配置
-PORT=7070                    # 应用端口
+# 可选配�?PORT=7070                    # 应用端口
 FLASK_ENV=production         # 运行环境
 ```
 
@@ -72,35 +66,28 @@ services:
 
 ## 📱 使用说明
 
-1. **访问应用**：打开浏览器访问 `http://localhost:7070`
+1. **访问应用**：打开浏览器访�?`http://localhost:7070`
 2. **上传文件**：拖拽或点击上传区域
-3. **创建频道**：点击侧边栏添加新频道
-4. **移动端**：使用手机浏览器访问同一地址
+3. **创建频道**：点击侧边栏添加新频�?4. **移动�?*：使用手机浏览器访问同一地址
 
-## 🛠️ 开发
-
+## 🛠�?开�?
 ```bash
-# 前端开发
-cd frontend
+# 前端开�?cd frontend
 npm install
 npm run dev
 
-# 后端开发
-cd backend
+# 后端开�?cd backend
 pip install -r requirements.txt
 python app.py
 ```
 
-## 📄 许可证
-
+## 📄 许可�?
 MIT License - 详见 [LICENSE](LICENSE) 文件
 
 ## 🤝 贡献
 
-欢迎提交 Issue 和 Pull Request！
-
+欢迎提交 Issue �?Pull Request�?
 ## 🆘 支持
 
-如有问题，请通过以下方式联系：
-- GitHub Issues
+如有问题，请通过以下方式联系�?- GitHub Issues
 - 邮箱: your-email@example.com

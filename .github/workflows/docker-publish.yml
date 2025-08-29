@@ -1,4 +1,4 @@
-name: Build and Publish Docker Image
+name: Build, Test and Publish Docker Image
 
 on:
   push:
@@ -12,7 +12,7 @@ env:
   IMAGE_NAME: lanshare
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -24,13 +24,6 @@ jobs:
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-
-    - name: Log in to Docker Hub
-      if: github.event_name != 'pull_request'
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
 
     - name: Extract metadata
       id: meta
@@ -44,49 +37,33 @@ jobs:
           type=semver,pattern={{major}}.{{minor}}
           type=raw,value=latest,enable={{is_default_branch}}
 
-    - name: Build and push Docker image
+    - name: Build Docker image for testing
       uses: docker/build-push-action@v5
       with:
         context: .
-        push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.meta.outputs.tags }}
+        load: true  # 加载到本地Docker守护进程
+        tags: ${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:test
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
-    - name: Test image
+    - name: Test local Docker image
       run: |
-        # 直接使用构建和推送后的本地镜像
-        IMAGE_NAME="${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}"
+        # 使用本地构建的镜像进行测试
+        IMAGE_NAME="${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:test"
         IMAGE_NAME_LOWER=$(echo "$IMAGE_NAME" | tr '[:upper:]' '[:lower:]')
-        IMAGE_TAG="${IMAGE_NAME_LOWER}:latest"
         
-        echo "Testing image: $IMAGE_TAG"
+        echo "Testing local image: $IMAGE_NAME_LOWER"
         
         # 检查本地镜像
         echo "Available local images:"
         docker images | grep lanshare || echo "No lanshare images found"
         
-        # 检查镜像是否存在
-        if ! docker image inspect $IMAGE_TAG > /dev/null 2>&1; then
-          echo "Image not found locally, trying with tag from this build"
-          # 使用当前构建的标签
-          IMAGE_TAG="${IMAGE_NAME_LOWER}:${{ github.ref_name }}"
-          echo "Trying tag: $IMAGE_TAG"
-        fi
-        
-        # 确保镜像存在
-        if ! docker image inspect $IMAGE_TAG > /dev/null 2>&1; then
-          echo "Still no image found, checking Docker Hub"
-          # 从Docker Hub拉取
-          docker pull $IMAGE_TAG
-        fi
-        
         # 检查镜像详情
-        docker inspect $IMAGE_TAG
+        docker inspect $IMAGE_NAME_LOWER
         
         # 启动容器并等待服务就绪
-        docker run -d -p 7070:7070 --name test $IMAGE_TAG
+        docker run -d -p 7070:7070 --name test $IMAGE_NAME_LOWER
         
         # 检查容器状态
         echo "Container status:"
@@ -133,3 +110,21 @@ jobs:
         docker inspect test
         docker stop test && docker rm test
         exit 1
+
+    - name: Log in to Docker Hub
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Push Docker image
+      if: github.event_name != 'pull_request'
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max

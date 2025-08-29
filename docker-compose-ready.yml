@@ -1,6 +1,4 @@
-# LanShare - 局域网文件共享
 version: '3.8'
-
 services:
   lanshare:
     image: zhong12138/lanshare:latest

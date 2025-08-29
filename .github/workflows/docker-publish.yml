@@ -56,16 +56,23 @@ jobs:
 
     - name: Test image
       run: |
-        # 设置小写镜像名称
-        IMAGE_NAME="${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest"
-        IMAGE_NAME_LOWER=$(echo "$IMAGE_NAME" | tr '[:upper:]' '[:lower:]')
+        # 使用构建步骤中生成的实际镜像名称
+        IMAGE_NAME_LOWER="${{ steps.meta.outputs.tags }}"
         
         echo "Testing image: $IMAGE_NAME_LOWER"
+        
+        # 检查镜像是否存在
+        if ! docker image inspect $IMAGE_NAME_LOWER > /dev/null 2>&1; then
+          echo "Image not found, trying alternative tag"
+          IMAGE_NAME_LOWER="${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest"
+          IMAGE_NAME_LOWER=$(echo "$IMAGE_NAME_LOWER" | tr '[:upper:]' '[:lower:]')
+          echo "Using fallback image: $IMAGE_NAME_LOWER"
+        fi
         
         # 检查镜像详情
         docker inspect $IMAGE_NAME_LOWER
         
-        # 启动容器并等待服务就绪，使用前台模式便于调试
+        # 启动容器并等待服务就绪
         docker run -d -p 7070:7070 --name test $IMAGE_NAME_LOWER
         
         # 检查容器状态

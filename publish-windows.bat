@@ -90,21 +90,21 @@ echo version: '3.8'
 echo services:
 echo   lanshare:
 echo     image: %DOCKER_USERNAME%/%IMAGE_NAME%:latest
- echo     ports:
+echo     ports:
 echo       - "7070:7070"
 echo     volumes:
 echo       - ./uploads:/app/uploads
 echo       - ./data:/app/data
- echo     restart: unless-stopped
+echo     restart: unless-stopped
 echo     environment:
 echo       - FLASK_ENV=production
-) > docker-compose-hub-ready.yml
+) > docker-compose-ready.yml
 
 echo.
-echo [INFO] docker-compose-hub-ready.yml created for users
+echo [INFO] docker-compose-ready.yml created for users
 echo.
 echo To deploy your published image:
 echo 1. docker login
-echo 2. docker-compose -f docker-compose-hub-ready.yml up -d
+echo 2. docker-compose -f docker-compose-ready.yml up -d
 echo.
 pause

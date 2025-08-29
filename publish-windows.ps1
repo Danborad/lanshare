@@ -25,7 +25,11 @@ $isLoggedIn = $false
 
 # 多种方式检测登录状态
 if ($dockerInfo -match "Username" -or $dockerInfo -match "Registry" -or $dockerInfo -match "docker.io") {
-    # 尝试直接检查凭据
+    $isLoggedIn = $true
+}
+
+# 如果上述检测失败，尝试实际拉取测试
+if (-not $isLoggedIn) {
     try {
         $loginCheck = docker pull hello-world 2>$null
         if ($LASTEXITCODE -eq 0) {
@@ -41,7 +45,7 @@ if (-not $isLoggedIn) {
     Write-Host "Let's login to Docker Hub..." -ForegroundColor Yellow
     
     # 提供交互式登录
-    $loginResult = docker login
+    docker login
     if ($LASTEXITCODE -ne 0) {
         Write-Host "ERROR: Docker login failed" -ForegroundColor Red
         exit 1

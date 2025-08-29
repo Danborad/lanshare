@@ -331,7 +331,7 @@ def generate_qrcode():
     qr.add_data(url)
     qr.make(fit=True)
     
-    qr_img = qr.make_image(fill_color="black", back_color="white")
+    qr_img = qrcode.make_image(fill_color="black", back_color="white")
     buffered = BytesIO()
     qr_img.save(buffered, format="PNG")
     qr_base64 = base64.b64encode(buffered.getvalue()).decode()
@@ -744,36 +744,21 @@ def delete_message(message_id):
     finally:
         session.close()
 
-# WebSocket事件处理
-@socketio.on('connect')
-def on_connect():
-    print(f'用户连接: {request.sid}')
-    return True
+// ... existing code ...
 
-@socketio.on('disconnect')
-def on_disconnect():
-    print(f'用户断开连接: {request.sid}')
-
-@socketio.on('join_channel')
-def on_join_channel(data):
-    channel = data.get('channel', 'default')
-    join_room(channel)
-    print(f'用户 {request.sid} 加入频道: {channel}')
-    emit('joined_channel', {'channel': channel}, to=request.sid)
-    return True
-
-@socketio.on('leave_channel')
-def on_leave_channel(data):
-    channel = data.get('channel', 'default')
-    leave_room(channel)
-    print(f'用户 {request.sid} 离开频道: {channel}')
-    emit('left_channel', {'channel': channel}, to=request.sid)
-    return True
+@app.route('/health')
+def health_check():
+    """健康检查端点"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'service': 'lanshare'
+    }), 200
 
 if __name__ == '__main__':
-    # 确保必要的目录存在
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    os.makedirs(os.path.dirname(app.config['DATABASE_PATH']), exist_ok=True)
+    # 启动Flask应用
+    port = int(os.environ.get('PORT', 7070))
+    debug = os.environ.get('FLASK_ENV') == 'development'
     
-    # 单容器模式：使用7070端口同时服务前后端
-    socketio.run(app, host='0.0.0.0', port=7070, debug=False, allow_unsafe_werkzeug=True)
+    print(f"Starting server on port {port}")
+    socketio.run(app, host='0.0.0.0', port=port, debug=debug)

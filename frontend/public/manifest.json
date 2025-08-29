@@ -1,0 +1,32 @@
+{
+  "name": "LanShare - 局域网文件传输",
+  "short_name": "LanShare",
+  "description": "现代化的局域网文件传输和消息系统",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "categories": ["utilities", "productivity"],
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "/lanshare-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/lanshare-logo.svg",
+      "sizes": "128x128",
+      "type": "image/svg+xml"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/lanshare-logo.svg",
+      "sizes": "128x128",
+      "type": "image/svg+xml"
+    }
+  ]
+}

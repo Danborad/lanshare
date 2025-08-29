@@ -1,0 +1,19 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景圆角矩形 -->
+  <rect width="128" height="128" rx="28" fill="#1d1d1f"/>
+  
+  <!-- WiFi信号图标 -->
+  <g transform="translate(64, 76)">
+    <!-- 最外层弧线 -->
+    <path d="M -36 -12 A 36 36 0 0 1 36 -12" stroke="#ffffff" stroke-width="8" stroke-linecap="round" fill="none"/>
+    
+    <!-- 中间层弧线 -->
+    <path d="M -24 0 A 24 24 0 0 1 24 0" stroke="#ffffff" stroke-width="8" stroke-linecap="round" fill="none"/>
+    
+    <!-- 内层弧线 -->
+    <path d="M -12 12 A 12 12 0 0 1 12 12" stroke="#ffffff" stroke-width="8" stroke-linecap="round" fill="none"/>
+    
+    <!-- 中心点 -->
+    <circle cx="0" cy="24" r="6" fill="#ffffff"/>
+  </g>
+</svg>

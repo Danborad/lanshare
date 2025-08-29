@@ -1,0 +1,29 @@
+# LanShare - 局域网文件传输和消息系统
+# 单容器部署配置
+
+services:
+  lanshare:
+    # 构建镜像
+    build: .
+    
+    # 使用主机网络模式
+    network_mode: host
+    
+    # 数据存储映射
+    volumes:
+      - ./uploads:/app/uploads          # 文件上传目录
+      - ./backend/data:/app/data        # 数据库存储目录
+    
+    # 环境变量
+    environment:
+      - FLASK_ENV=production            # Flask运行模式
+      - UPLOAD_FOLDER=/app/uploads      # 文件上传路径
+      - DATABASE_PATH=/app/data/lanshare.db  # 数据库文件路径
+      - HOST_IP=${HOST_IP:-localhost}   # 主机IP地址
+    
+    # 自动重启
+    restart: unless-stopped
+    
+    # 端口映射 (host模式下此配置仅作说明)
+    ports:
+      - "7070:7070"                    # 访问端口: http://localhost:7070

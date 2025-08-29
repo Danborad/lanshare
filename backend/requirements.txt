@@ -1,0 +1,9 @@
+Flask==2.3.3
+Flask-SocketIO==5.3.6
+Flask-CORS==4.0.0
+SQLAlchemy==2.0.21
+Werkzeug==2.3.7
+python-socketio==5.9.0
+Pillow==10.0.1
+qrcode==7.4.2
+python-dotenv==1.0.0

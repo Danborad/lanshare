@@ -744,7 +744,7 @@ def delete_message(message_id):
     finally:
         session.close()
 
-// ... existing code ...
+# ... existing code ...
 
 @app.route('/health')
 def health_check():

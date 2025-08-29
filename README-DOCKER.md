@@ -4,29 +4,58 @@
 
 ## 🚀 30秒极速上手
 
-### 1. 一键启动
+### 1. 一键启动（基础版）
 ```bash
 docker run -d \
   --name lanshare \
   -p 7070:7070 \
   -v $(pwd)/uploads:/app/uploads \
   -v $(pwd)/data:/app/data \
+  -e DOCKER_CONTAINER=true \
+  -e HOST_IP=192.168.1.100 \
   zhong12138/lanshare:latest
 ```
 
-### 2. 即刻访问
-打开 http://localhost:7070 即刻开传！
-
-### 3. Docker Compose方式（推荐）
+### 2. Docker Compose方式（推荐）
 ```bash
 # 创建目录
 mkdir lanshare && cd lanshare
 
-# 下载配置文件
+# 下载配置文件和IP设置模板
 curl -o docker-compose.yml https://raw.githubusercontent.com/Danborad/lanshare/master/docker-compose-ready.yml
+curl -o .env.example https://raw.githubusercontent.com/Danborad/lanshare/master/.env.example
+
+# 设置你的局域网IP
+cp .env.example .env  # Windows用 copy .env.example .env
+# 编辑 .env 文件，将 HOST_IP 设置为你的局域网IP
 
 # 启动
 docker-compose up -d
+```
+
+### 3. 配置宿主机IP（解决IP显示问题）
+**重要！** 为避免显示Docker容器IP而不是真实局域网IP，请配置环境变量：
+
+#### 找到你的局域网IP：
+- **Windows**: `ipconfig` → 查找`IPv4地址`
+- **macOS/Linux**: `ifconfig` 或 `ip addr`
+- **通常是**: `192.168.x.x` 或 `10.x.x.x`
+
+#### 设置方法：
+```bash
+# 方法1: Docker Run时直接设置
+docker run -d \
+  --name lanshare \
+  -p 7070:7070 \
+  -v $(pwd)/uploads:/app/uploads \
+  -v $(pwd)/data:/app/data \
+  -e HOST_IP=192.168.1.100 \
+  zhong12138/lanshare:latest
+
+# 方法2: Docker Compose（推荐）
+# 创建.env文件
+echo "HOST_IP=192.168.1.100" > .env
+echo "DOCKER_HOST_IP=192.168.1.100" >> .env
 ```
 
 ## ✨ 核心特性
@@ -60,11 +89,20 @@ ports:
   - "8080:7070"  # 改为8080端口
 ```
 
-### 环境变量
+### 环境变量配置
 ```yaml
 environment:
   - FLASK_ENV=production
+  - HOST_IP=192.168.1.100          # 你的局域网IP地址
+  - DOCKER_HOST_IP=192.168.1.100   # Docker宿主机IP
   - MAX_FILE_SIZE=100MB
+```
+
+### 完整的.env文件示例
+```bash
+# .env文件内容
+HOST_IP=192.168.1.100
+DOCKER_HOST_IP=192.168.1.100
 ```
 
 ## 🛠️ 常用命令
@@ -102,6 +140,8 @@ docker-compose down -v
 | 权限错误 | 确保Docker用户有目录写入权限 |
 | 无法访问 | 检查防火墙设置和端口开放 |
 | 文件丢失 | 确认卷挂载路径正确 |
+| IP显示为Docker容器IP | 设置HOST_IP环境变量为真实局域网IP |
+| 其他设备无法访问 | 检查局域网IP设置是否正确 |
 
 ## 📱 使用场景
 

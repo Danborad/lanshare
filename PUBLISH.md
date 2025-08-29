@@ -40,7 +40,7 @@ git remote add origin https://github.com/Danborad/lanshare.git
 # 登录Docker Hub
 docker login
 
-# 设置用户�?export DOCKERHUB_USERNAME=your-dockerhub-username
+# 设置用户�?export DOCKERHUB_USERNAME=zhong12138
 
 # 运行发布脚本
 ./publish.sh v1.0.0

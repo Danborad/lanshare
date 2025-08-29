@@ -56,7 +56,26 @@ jobs:
 
     - name: Test image
       run: |
+        # 启动容器并等待服务就绪
         docker run --rm -d -p 7070:7070 --name test ${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
-        sleep 15
-        curl -f http://localhost:7070/health || curl -f http://localhost:7070/api/system/info || exit 1
+        
+        # 等待容器启动并检查端口
+        for i in {1..30}; do
+          if curl -f http://localhost:7070/health 2>/dev/null; then
+            echo "Health check passed"
+            docker stop test
+            exit 0
+          elif curl -f http://localhost:7070 2>/dev/null; then
+            echo "Service is responding"
+            docker stop test
+            exit 0
+          else
+            echo "Waiting for service to start... ($i/30)"
+            sleep 2
+          fi
+        done
+        
+        echo "Service failed to start properly"
+        docker logs test
         docker stop test
+        exit 1

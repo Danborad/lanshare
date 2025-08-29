@@ -18,42 +18,25 @@ if (-not (Test-Command "docker")) {
     exit 1
 }
 
-# Check Docker Hub login with improved detection
+# Check Docker Hub login
 Write-Host "[INFO] Checking Docker Hub login status..." -ForegroundColor Cyan
-$dockerInfo = docker info 2>$null
-$isLoggedIn = $false
-
-# 多种方式检测登录状态
-if ($dockerInfo -match "Username" -or $dockerInfo -match "Registry" -or $dockerInfo -match "docker.io") {
-    $isLoggedIn = $true
-}
-
-# 如果上述检测失败，尝试实际拉取测试
-if (-not $isLoggedIn) {
-    try {
-        $loginCheck = docker pull hello-world 2>$null
-        if ($LASTEXITCODE -eq 0) {
-            $isLoggedIn = $true
+try {
+    $dockerInfo = docker info 2>$null
+    if ($dockerInfo -notmatch "Username") {
+        Write-Host "WARNING: Not logged into Docker Hub" -ForegroundColor Yellow
+        Write-Host "Let's login to Docker Hub..." -ForegroundColor Yellow
+        docker login
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "ERROR: Docker login failed" -ForegroundColor Red
+            exit 1
         }
-    } catch {
-        $isLoggedIn = $false
+        Write-Host "[SUCCESS] Docker Hub login completed" -ForegroundColor Green
+    } else {
+        Write-Host "[OK] Docker Hub login verified" -ForegroundColor Green
     }
-}
-
-if (-not $isLoggedIn) {
-    Write-Host "WARNING: Not logged into Docker Hub" -ForegroundColor Yellow
-    Write-Host "Let's login to Docker Hub..." -ForegroundColor Yellow
-    
-    # 提供交互式登录
-    docker login
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "ERROR: Docker login failed" -ForegroundColor Red
-        exit 1
-    }
-    
-    Write-Host "[SUCCESS] Docker Hub login completed" -ForegroundColor Green
-} else {
-    Write-Host "[OK] Docker Hub login verified" -ForegroundColor Green
+} catch {
+    Write-Host "ERROR: Docker is not running or not accessible" -ForegroundColor Red
+    exit 1
 }
 
 Write-Host ""

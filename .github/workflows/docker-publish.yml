@@ -56,24 +56,37 @@ jobs:
 
     - name: Test image
       run: |
-        # 使用构建步骤中生成的实际镜像名称
-        IMAGE_NAME_LOWER="${{ steps.meta.outputs.tags }}"
+        # 直接使用构建和推送后的本地镜像
+        IMAGE_NAME="${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}"
+        IMAGE_NAME_LOWER=$(echo "$IMAGE_NAME" | tr '[:upper:]' '[:lower:]')
+        IMAGE_TAG="${IMAGE_NAME_LOWER}:latest"
         
-        echo "Testing image: $IMAGE_NAME_LOWER"
+        echo "Testing image: $IMAGE_TAG"
+        
+        # 检查本地镜像
+        echo "Available local images:"
+        docker images | grep lanshare || echo "No lanshare images found"
         
         # 检查镜像是否存在
-        if ! docker image inspect $IMAGE_NAME_LOWER > /dev/null 2>&1; then
-          echo "Image not found, trying alternative tag"
-          IMAGE_NAME_LOWER="${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest"
-          IMAGE_NAME_LOWER=$(echo "$IMAGE_NAME_LOWER" | tr '[:upper:]' '[:lower:]')
-          echo "Using fallback image: $IMAGE_NAME_LOWER"
+        if ! docker image inspect $IMAGE_TAG > /dev/null 2>&1; then
+          echo "Image not found locally, trying with tag from this build"
+          # 使用当前构建的标签
+          IMAGE_TAG="${IMAGE_NAME_LOWER}:${{ github.ref_name }}"
+          echo "Trying tag: $IMAGE_TAG"
+        fi
+        
+        # 确保镜像存在
+        if ! docker image inspect $IMAGE_TAG > /dev/null 2>&1; then
+          echo "Still no image found, checking Docker Hub"
+          # 从Docker Hub拉取
+          docker pull $IMAGE_TAG
         fi
         
         # 检查镜像详情
-        docker inspect $IMAGE_NAME_LOWER
+        docker inspect $IMAGE_TAG
         
         # 启动容器并等待服务就绪
-        docker run -d -p 7070:7070 --name test $IMAGE_NAME_LOWER
+        docker run -d -p 7070:7070 --name test $IMAGE_TAG
         
         # 检查容器状态
         echo "Container status:"

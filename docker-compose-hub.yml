@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  lanshare:
+    image: lanshare/lanshare:latest  # 替换为你的Docker Hub用户名
+    container_name: lanshare-app
+    ports:
+      - "7070:7070"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./data:/app/data
+    restart: unless-stopped
+    environment:
+      - FLASK_ENV=production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7070/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  default:
+    name: lanshare-network

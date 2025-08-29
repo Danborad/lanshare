@@ -51,7 +51,10 @@ def get_all_local_ips():
     ips = []
     
     try:
-        # 1. 从环境变量获取宿主机IP
+        # 0. 检测是否在Docker环境中运行
+        is_docker = os.path.exists('/.dockerenv') or os.environ.get('DOCKER_CONTAINER', '').lower() == 'true'
+        
+        # 1. 从环境变量获取宿主机IP（最高优先级）
         host_ip = os.environ.get('HOST_IP')
         if host_ip and host_ip not in [item.get('ip') for item in ips]:
             ips.append({
@@ -60,7 +63,54 @@ def get_all_local_ips():
                 'type': 'host'
             })
         
-        # 2. 通过连接外部地址获取本机IP
+        # 2. 如果在Docker环境中，尝试多种方式获取宿主机IP
+        if is_docker:
+            # 2.1 尝试从Docker网关获取宿主机IP
+            try:
+                with open('/proc/net/route', 'r') as f:
+                    for line in f:
+                        fields = line.strip().split()
+                        if len(fields) >= 3 and fields[1] == '00000000':
+                            gateway_hex = fields[2]
+                            if gateway_hex != '00000000':
+                                gateway = socket.inet_ntoa(bytes.fromhex(gateway_hex)[::-1])
+                                # 常见的Docker宿主机IP模式
+                                if gateway.startswith('172.'):
+                                    # Docker默认网段，宿主机通常是网关
+                                    host_ip = gateway
+                                    if host_ip not in [item['ip'] for item in ips]:
+                                        ips.insert(0, {
+                                            'ip': host_ip,
+                                            'name': 'Docker宿主机',
+                                            'type': 'host'
+                                        })
+                                        
+                                    # 尝试获取更准确的宿主机局域网IP
+                                    # 基于Docker网关推断可能的宿主机IP
+                                    gateway_parts = gateway.split('.')
+                                    if len(gateway_parts) == 4:
+                                        # 假设宿主机在192.168.x.x网段
+                                        possible_lan_ip = f"192.168.{gateway_parts[2]}.1"
+                                        if possible_lan_ip not in [item['ip'] for item in ips]:
+                                            ips.insert(0, {
+                                                'ip': possible_lan_ip,
+                                                'name': '局域网宿主机',
+                                                'type': 'lan'
+                                            })
+                                break
+            except:
+                pass
+                
+            # 2.2 从环境变量获取Docker宿主机的局域网IP
+            docker_host_ip = os.environ.get('DOCKER_HOST_IP')
+            if docker_host_ip and docker_host_ip not in [item['ip'] for item in ips]:
+                ips.insert(0, {
+                    'ip': docker_host_ip,
+                    'name': 'Docker宿主机局域网IP',
+                    'type': 'lan'
+                })
+        
+        # 3. 通过连接外部地址获取本机IP（在非Docker环境或作为补充）
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(("8.8.8.8", 80))
@@ -68,23 +118,25 @@ def get_all_local_ips():
             s.close()
             if ip not in [item['ip'] for item in ips]:
                 if ip.startswith('192.168.'):
-                    ips.append({
+                    ips.insert(0, {
                         'ip': ip,
                         'name': '局域网IP',
                         'type': 'lan'
                     })
                 elif ip.startswith('10.'):
-                    ips.append({
+                    ips.insert(0, {
                         'ip': ip,
                         'name': '内网IP',
                         'type': 'lan'
                     })
                 elif ip.startswith('172.'):
-                    ips.append({
-                        'ip': ip,
-                        'name': 'Docker内网IP',
-                        'type': 'docker'
-                    })
+                    # 只有在非Docker环境或没有更好选择时才添加
+                    if not is_docker or len(ips) == 0:
+                        ips.append({
+                            'ip': ip,
+                            'name': 'Docker内网IP',
+                            'type': 'docker'
+                        })
                 else:
                     ips.append({
                         'ip': ip,
@@ -94,29 +146,31 @@ def get_all_local_ips():
         except:
             pass
         
-        # 3. 通过客户端请求推测宿主机IP（在API中处理）
-        # 这部分在system_info API中处理
-        
-        # 4. 如果在Docker环境中，尝试从网关推测宿主机IP
-        try:
-            with open('/proc/net/route', 'r') as f:
-                for line in f:
-                    fields = line.strip().split()
-                    if fields[1] != '00000000' or not int(fields[3], 16) & 2:
-                        continue
-                    gateway = socket.inet_ntoa(bytes.fromhex(fields[2])[::-1])
-                    if gateway.startswith('172.') and gateway not in [item['ip'] for item in ips]:
-                        # 推测宿主机IP
-                        host_ip = gateway.rsplit('.', 1)[0] + '.1'
-                        if host_ip not in [item['ip'] for item in ips]:
-                            ips.append({
-                                'ip': host_ip,
-                                'name': '推测宿主机IP',
-                                'type': 'inferred'
-                            })
-                    break
-        except:
-            pass
+        # 4. 检查本地网络接口（在非Docker环境中）
+        if not is_docker:
+            try:
+                import netifaces
+                interfaces = netifaces.interfaces()
+                for interface in interfaces:
+                    ifaddresses = netifaces.ifaddresses(interface)
+                    if netifaces.AF_INET in ifaddresses:
+                        for link in ifaddresses[netifaces.AF_INET]:
+                            ip = link['addr']
+                            if ip != '127.0.0.1' and ip not in [item['ip'] for item in ips]:
+                                if ip.startswith('192.168.'):
+                                    ips.insert(0, {
+                                        'ip': ip,
+                                        'name': f'局域网IP ({interface})',
+                                        'type': 'interface'
+                                    })
+                                elif ip.startswith('10.'):
+                                    ips.insert(0, {
+                                        'ip': ip,
+                                        'name': f'内网IP ({interface})',
+                                        'type': 'interface'
+                                    })
+            except ImportError:
+                pass
         
         # 5. 添加localhost作为备选
         if not any(item['ip'] == 'localhost' for item in ips):
@@ -126,7 +180,19 @@ def get_all_local_ips():
                 'type': 'localhost'
             })
         
-        return ips
+        # 6. 去重并保持优先级顺序
+        seen = set()
+        unique_ips = []
+        for ip_info in ips:
+            if ip_info['ip'] not in seen:
+                seen.add(ip_info['ip'])
+                unique_ips.append(ip_info)
+        
+        return unique_ips if unique_ips else [{
+            'ip': 'localhost',
+            'name': '本地地址',
+            'type': 'localhost'
+        }]
     except Exception as e:
         print(f"获取IP地址失败: {e}")
         return [{

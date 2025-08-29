@@ -24,10 +24,18 @@
 ```bash
 git clone https://github.com/Danborad/lanshare.git
 cd lanshare
+
+# 配置宿主机IP（重要！解决Docker IP显示问题）
+# 复制环境变量模板
+cp .env.example .env  # Windows 用 copy .env.example .env
+# 编辑 .env 文件，将 HOST_IP 设置为你的局域网IP
+# Windows: 运行 ipconfig 查看你的局域网IP（通常是192.168.x.x）
+# macOS/Linux: 运行 ifconfig 或 ip addr 查看
+
 docker-compose up -d
 ```
 
-**完成！** 打开 http://localhost:7070 即刻开传！
+**完成！** 打开 http://localhost:7070 即刻开传！现在显示的应该是你的真实局域网IP地址了！
 
 ### 🔧 极客玩法
 

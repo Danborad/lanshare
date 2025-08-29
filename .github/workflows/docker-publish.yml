@@ -56,8 +56,14 @@ jobs:
 
     - name: Test image
       run: |
+        # 设置小写镜像名称
+        IMAGE_NAME="${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest"
+        IMAGE_NAME_LOWER=$(echo "$IMAGE_NAME" | tr '[:upper:]' '[:lower:]')
+        
+        echo "Testing image: $IMAGE_NAME_LOWER"
+        
         # 启动容器并等待服务就绪
-        docker run --rm -d -p 7070:7070 --name test ${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+        docker run --rm -d -p 7070:7070 --name test $IMAGE_NAME_LOWER
         
         # 等待容器启动并检查端口
         for i in {1..30}; do

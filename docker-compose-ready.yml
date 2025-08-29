@@ -10,3 +10,6 @@ services:
     restart: unless-stopped
     environment:
       - FLASK_ENV=production
+      - DOCKER_CONTAINER=true
+      - HOST_IP=${HOST_IP:-}
+      - DOCKER_HOST_IP=${DOCKER_HOST_IP:-}

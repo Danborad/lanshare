@@ -59,6 +59,18 @@ services:
       - ./uploads:/app/uploads
       - ./data:/app/data
     restart: unless-stopped
+    environment:
+      - DOCKER_CONTAINER=true
+      - HOST_IP=${HOST_IP:-}
+      - DOCKER_HOST_IP=${DOCKER_HOST_IP:-}
+```
+
+### 环境变量配置
+创建 `.env` 文件：
+```bash
+# 设置你的局域网IP地址
+HOST_IP=192.168.1.100
+DOCKER_HOST_IP=192.168.1.100
 ```
 
 ## 📱 使用

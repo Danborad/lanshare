@@ -25,6 +25,9 @@ COPY backend/ ./
 # 从前端构建阶段复制静态文件到后端目录
 COPY --from=frontend-builder /app/frontend/dist ./static
 
+# 复制版本文件
+COPY VERSION ./
+
 # 创建必要的目录
 RUN mkdir -p /app/uploads /app/data
 

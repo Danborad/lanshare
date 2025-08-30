@@ -3,7 +3,8 @@ version: "3.8"
 
 services:
   lanshare:
-    image: zhong12138/lanshare:latest
+    build: .
+    image: lanshare-local:latest
     ports:
       - "7070:7070"
     volumes:

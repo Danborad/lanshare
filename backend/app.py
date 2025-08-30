@@ -344,7 +344,7 @@ def generate_qrcode():
     qr.add_data(url)
     qr.make(fit=True)
     
-    qr_img = qrcode.make_image(fill_color="black", back_color="white")
+    qr_img = qr.make_image(fill_color="black", back_color="white")
     buffered = BytesIO()
     qr_img.save(buffered, format="PNG")
     qr_base64 = base64.b64encode(buffered.getvalue()).decode()
@@ -757,8 +757,6 @@ def delete_message(message_id):
     finally:
         session.close()
 
-# ... existing code ...
-
 @app.route('/health')
 def health_check():
     """健康检查端点"""
@@ -772,9 +770,16 @@ def health_check():
 def get_version():
     """获取系统版本信息"""
     try:
-        version_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'VERSION')
-        with open(version_file, 'r', encoding='utf-8') as f:
-            version_content = f.read().strip()
+        # 获取VERSION文件的路径（在容器内）
+        version_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'VERSION')
+        
+        try:
+            with open(version_file, 'r', encoding='utf-8') as f:
+                version_content = f.read().strip()
+        except UnicodeDecodeError:
+            # 如果UTF-8失败，尝试其他编码
+            with open(version_file, 'r', encoding='gbk', errors='ignore') as f:
+                version_content = f.read().strip()
         
         # 解析版本内容
         lines = version_content.split('\n')
@@ -793,8 +798,7 @@ def get_version():
         return jsonify({
             'version': 'v1.0.0',
             'full_version': 'LanShare v1.0.0',
-            'service': 'lanshare',
-            'error': str(e)
+            'service': 'lanshare'
         })
 
 if __name__ == '__main__':

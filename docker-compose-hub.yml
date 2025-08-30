@@ -12,6 +12,8 @@ services:
     environment:
       - FLASK_ENV=production
       - DOCKER_CONTAINER=true
+      # 重要：请将下面的IP地址修改为你的宿主机局域网IP
+      # 例如：如果你的电脑在局域网中的IP是192.168.1.100，请改为这个
       - HOST_IP=192.168.1.100
       - DOCKER_HOST_IP=192.168.1.100
     healthcheck:

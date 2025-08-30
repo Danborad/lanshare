@@ -65,6 +65,15 @@ def get_all_local_ips():
         
         # 2. 如果在Docker环境中，尝试多种方式获取宿主机IP
         if is_docker:
+            # 2.0 从环境变量获取明确配置的IP
+            explicit_host_ip = os.environ.get('HOST_IP') or os.environ.get('DOCKER_HOST_IP')
+            if explicit_host_ip and explicit_host_ip not in [item['ip'] for item in ips]:
+                ips.insert(0, {
+                    'ip': explicit_host_ip,
+                    'name': '配置IP',
+                    'type': 'host'
+                })
+            
             # 2.1 尝试从Docker网关获取宿主机IP
             try:
                 with open('/proc/net/route', 'r') as f:
@@ -98,12 +107,13 @@ def get_all_local_ips():
                                                 'type': 'lan'
                                             })
                                 break
-            except:
+            except Exception as e:
+                print(f"Docker网关检测失败: {e}")
                 pass
                 
-            # 2.2 从环境变量获取Docker宿主机的局域网IP
+            # 2.2 从环境变量获取Docker宿主机的局域网IP（备用）
             docker_host_ip = os.environ.get('DOCKER_HOST_IP')
-            if docker_host_ip and docker_host_ip not in [item['ip'] for item in ips]:
+            if docker_host_ip and docker_host_ip not in [item['ip'] for item in ips] and docker_host_ip != explicit_host_ip:
                 ips.insert(0, {
                     'ip': docker_host_ip,
                     'name': 'Docker宿主机局域网IP',
@@ -757,6 +767,35 @@ def health_check():
         'timestamp': datetime.now().isoformat(),
         'service': 'lanshare'
     }), 200
+
+@app.route('/api/system/version')
+def get_version():
+    """获取系统版本信息"""
+    try:
+        version_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'VERSION')
+        with open(version_file, 'r', encoding='utf-8') as f:
+            version_content = f.read().strip()
+        
+        # 解析版本内容
+        lines = version_content.split('\n')
+        version = 'v1.0.0'  # 默认值
+        for line in lines:
+            if line.startswith('LanShare'):
+                version = line.replace('LanShare', '').strip()
+                break
+        
+        return jsonify({
+            'version': version,
+            'full_version': version_content,
+            'service': 'lanshare'
+        })
+    except Exception as e:
+        return jsonify({
+            'version': 'v1.0.0',
+            'full_version': 'LanShare v1.0.0',
+            'service': 'lanshare',
+            'error': str(e)
+        })
 
 if __name__ == '__main__':
     # 启动Flask应用

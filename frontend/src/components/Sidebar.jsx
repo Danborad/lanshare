@@ -129,6 +129,24 @@ const Sidebar = ({ isMobile = false, onClose }) => {
     setShowAddInput(false)
   }
 
+  // 版本信息状态
+  const [version, setVersion] = useState('v1.0.0')
+
+  // 获取版本信息
+  useEffect(() => {
+    const fetchVersion = async () => {
+      try {
+        const response = await fetch('/api/system/version')
+        const data = await response.json()
+        setVersion(data.version || 'v1.0.0')
+      } catch (error) {
+        console.error('获取版本信息失败:', error)
+        setVersion('v1.0.0')
+      }
+    }
+    fetchVersion()
+  }, [])
+
   return (
     <div className={`bg-card border-r border-border flex flex-col ${isMobile ? 'w-80 h-full' : 'w-64 h-full'
       }`}>
@@ -351,7 +369,7 @@ const Sidebar = ({ isMobile = false, onClose }) => {
 
       {/* 底部操作 */}
       <div className="p-4 border-t border-border">
-        <div className="flex justify-start">
+        <div className="flex justify-between items-center">
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={toggleTheme}
@@ -364,6 +382,11 @@ const Sidebar = ({ isMobile = false, onClose }) => {
               <Sun className="w-5 h-5" />
             )}
           </motion.button>
+          
+          {/* 版本号显示 */}
+          <div className="text-xs text-muted-foreground">
+            {version}
+          </div>
         </div>
       </div>
     </div>

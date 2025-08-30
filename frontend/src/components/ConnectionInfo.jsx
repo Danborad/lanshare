@@ -34,12 +34,11 @@ const ConnectionInfo = ({ isMobile = false, onClose, onlineUsers = 0, totalFiles
       setSystemInfo(info)
       setAvailableIPs(info.available_ips || [])
       
-      // 设置默认选中IP
-      const defaultIP = info.recommended_ip || (info.available_ips && info.available_ips[0]?.ip) || 'localhost'
-      setSelectedIP(defaultIP)
-      
-      // 生成默认URL和二维码
-      await generateQRCodeForIP(defaultIP, info.port)
+      // 仅在未选中IP时设置推荐IP
+      if (!selectedIP) {
+        const recommendedIP = info.recommended_ip || (info.available_ips && info.available_ips[0]?.ip) || 'localhost'
+        setSelectedIP(recommendedIP)
+      }
       
     } catch (error) {
       console.error('获取系统信息失败:', error)
@@ -116,6 +115,25 @@ const ConnectionInfo = ({ isMobile = false, onClose, onlineUsers = 0, totalFiles
   useEffect(() => {
     loadSystemInfo()
   }, [])
+
+  // 当系统信息加载完成后，生成默认二维码
+  useEffect(() => {
+    if (systemInfo && selectedIP) {
+      generateQRCodeForIP(selectedIP, systemInfo?.port || 7070)
+    }
+  }, [systemInfo, selectedIP])
+
+  // 初始化完成后自动选择推荐IP
+  useEffect(() => {
+    if (systemInfo && !selectedIP) {
+      const recommendedIP = systemInfo.recommended_ip || 
+        (systemInfo.available_ips && systemInfo.available_ips.length > 0 ? systemInfo.available_ips[0].ip : null)
+      if (recommendedIP) {
+        setSelectedIP(recommendedIP)
+        setAvailableIPs(systemInfo.available_ips || [])
+      }
+    }
+  }, [systemInfo])
 
   const handleCopyUrl = async () => {
     if (!currentURL) return

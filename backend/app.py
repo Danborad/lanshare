@@ -311,7 +311,10 @@ def system_info():
         'available_ips': all_ips,
         'recommended_ip': recommended_ip,
         'port': port,
-        'client_ip': client_ip  # 返回客户端IP供调试使用
+        'client_ip': client_ip,  # 返回客户端IP供调试使用
+        'docker_env': os.environ.get('DOCKER_CONTAINER', 'false') == 'true',
+        'host_ip': os.environ.get('HOST_IP', ''),
+        'docker_host_ip': os.environ.get('DOCKER_HOST_IP', '')
     })
 
 @app.route('/api/system/qrcode', methods=['POST'])

@@ -34,31 +34,34 @@ docker-compose up -d
 # 局域网: http://192.168.1.100:7070
 ```
 
-### 3. 配置宿主机IP（解决IP显示问题）
-**重要！** 为避免显示Docker容器IP而不是真实局域网IP，请配置环境变量：
+### 3. 配置宿主机IP（已集成）
+IP配置已直接集成到Docker配置中，开箱即用！
 
-#### 找到你的局域网IP：
-- **Windows**: `ipconfig` → 查找`IPv4地址`
-- **macOS/Linux**: `ifconfig` 或 `ip addr`
-- **通常是**: `192.168.x.x` 或 `10.x.x.x`
-
-#### 设置方法：
+#### 一键启动（推荐）
 ```bash
-# 方法1: Docker Run时直接设置
+# 项目已预设IP为192.168.1.100，直接启动
+docker-compose up -d
+
+# 访问应用
+# 本地: http://localhost:7070
+# 局域网: http://192.168.1.100:7070
+```
+
+#### 如需自定义IP
+```bash
+# 方法1: 直接编辑docker-compose.yml
+# 修改 environment 中的 HOST_IP 和 DOCKER_HOST_IP
+
+# 方法2: Docker Run时设置
 docker run -d \
   --name lanshare \
   -p 7070:7070 \
   -v $(pwd)/uploads:/app/uploads \
   -v $(pwd)/data:/app/data \
-  -e HOST_IP=192.168.1.100 \
-  -e DOCKER_HOST_IP=192.168.1.100 \
+  -e HOST_IP=192.168.0.100 \
+  -e DOCKER_HOST_IP=192.168.0.100 \
   --restart unless-stopped \
   zhong12138/lanshare:latest
-
-# 方法2: Docker Compose（推荐）
-# 项目已预设IP，如需修改：
-echo "HOST_IP=你的实际局域网IP" > .env
-echo "DOCKER_HOST_IP=你的实际局域网IP" >> .env
 ```
 
 ## ✨ 核心特性
@@ -101,12 +104,14 @@ environment:
   - MAX_FILE_SIZE=100MB
 ```
 
-### 完整的.env文件示例
-```bash
-# .env文件内容
-HOST_IP=192.168.1.100
-DOCKER_HOST_IP=192.168.1.100
+### 环境变量配置（已集成）
+IP配置已直接集成到Docker Compose文件中：
+```yaml
+environment:
+  - HOST_IP=192.168.1.100  # 预设局域网IP
+  - DOCKER_HOST_IP=192.168.1.100
 ```
+如需修改，直接编辑docker-compose.yml文件即可。
 
 ## 🛠️ 常用命令
 

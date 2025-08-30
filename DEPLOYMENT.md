@@ -49,18 +49,22 @@ ifconfig | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}' | head -1
 
 ### 修改IP地址
 
-编辑以下文件中的 `HOST_IP` 和 `DOCKER_HOST_IP` 变量：
+IP配置已直接集成到Docker Compose文件中，开箱即用！如需修改，直接编辑对应文件：
 
-1. `docker-compose.yml`
-2. `docker-compose-hub.yml`
-3. `docker-compose-ready.yml`
-4. `.env.example`（复制为 `.env` 后使用）
-
-示例配置：
+**方法1：编辑docker-compose.yml（推荐）**
 ```yaml
 environment:
-  - HOST_IP=192.168.1.150
+  - HOST_IP=192.168.1.150  # 改为你的实际局域网IP
   - DOCKER_HOST_IP=192.168.1.150
+```
+
+**方法2：使用一键启动脚本（自动检测）**
+```bash
+# Windows
+.\start-with-ip.ps1
+
+# Linux/macOS
+./start-with-ip.sh
 ```
 
 ## 部署方式

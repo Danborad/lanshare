@@ -26,22 +26,24 @@
 git clone https://github.com/Danborad/lanshare.git
 cd lanshare
 
-# 2. 配置宿主机IP（重要！解决Docker IP显示问题）
-# 复制环境变量模板
-cp .env.example .env  # Windows 用 copy .env.example .env
-# 编辑 .env 文件，将 HOST_IP 设置为你的局域网IP
-# Windows: 运行 ipconfig 查看你的局域网IP（通常是192.168.x.x）
-# macOS/Linux: 运行 ifconfig 或 ip addr 查看
-
-# 3. 启动服务
+# 2. 一键启动（已预设IP，开箱即用）
 docker-compose up -d
 
-# 4. 访问应用
+# 3. 访问应用
 # 打开浏览器访问 http://localhost:7070
 # 或者使用局域网IP访问：http://192.168.1.100:7070
 ```
 
 **完成！** 现在显示的应该是你的真实局域网IP地址了！
+
+### 🔧 自定义IP（可选）
+如果默认IP不适用，可以编辑任意docker-compose文件：
+```yaml
+# 修改环境变量为你的局域网IP
+environment:
+  - HOST_IP=192.168.0.100  # 改为你的实际IP
+  - DOCKER_HOST_IP=192.168.0.100
+```
 
 ### 🔧 极客玩法
 
@@ -71,13 +73,17 @@ services:
       - DOCKER_HOST_IP=${DOCKER_HOST_IP:-}
 ```
 
-### 环境变量配置
-创建 `.env` 文件：
-```bash
-# 设置你的局域网IP地址
-HOST_IP=192.168.1.100
-DOCKER_HOST_IP=192.168.1.100
+### 环境变量配置（已集成）
+IP配置已直接集成到Docker Compose文件中，无需额外创建.env文件：
+
+```yaml
+# docker-compose.yml 已包含
+environment:
+  - HOST_IP=192.168.1.100  # 预设局域网IP
+  - DOCKER_HOST_IP=192.168.1.100
 ```
+
+如需修改，直接编辑docker-compose.yml文件即可。
 
 ## 📱 使用
 

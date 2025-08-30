@@ -20,18 +20,31 @@ docker-compose -f docker-compose-ready.yml up
 
 ## 🔄 修改IP地址
 
-如果需要使用不同的IP地址，只需修改以下文件中的 `192.168.1.100`：
-
-1. `docker-compose.yml`
-2. `docker-compose-hub.yml` 
-3. `docker-compose-ready.yml`
-
-例如，改为 192.168.0.123：
+### 方法1：直接编辑文件（简单）
+编辑任意docker-compose文件，修改IP地址：
 
 ```yaml
 environment:
-  - HOST_IP=192.168.0.123
+  - HOST_IP=192.168.0.123  # 改为你的实际IP
   - DOCKER_HOST_IP=192.168.0.123
+```
+
+### 方法2：使用一键脚本（自动检测）
+```bash
+# Windows
+.\start-with-ip.ps1
+
+# Linux/macOS
+./start-with-ip.sh
+```
+
+### 方法3：获取本机IP后手动设置
+```bash
+# Windows
+ipconfig | findstr IPv4
+
+# Linux/macOS
+ip route get 1 | awk '{print $7}'
 ```
 
 ## 🎯 验证启动成功

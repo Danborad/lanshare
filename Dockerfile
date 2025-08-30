@@ -1,5 +1,5 @@
 # 多阶段构建：先构建前端，再设置后端环境
-FROM node:18-alpine as frontend-builder
+FROM --platform=$BUILDPLATFORM node:18-alpine as frontend-builder
 
 WORKDIR /app/frontend
 
@@ -11,7 +11,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # 第二阶段：设置Python后端环境
-FROM python:3.11-slim
+FROM --platform=$TARGETPLATFORM python:3.11-slim
 
 WORKDIR /app
 

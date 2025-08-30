@@ -22,20 +22,26 @@
 ### 🐳 懒人专用（推荐）
 
 ```bash
+# 1. 克隆项目
 git clone https://github.com/Danborad/lanshare.git
 cd lanshare
 
-# 配置宿主机IP（重要！解决Docker IP显示问题）
+# 2. 配置宿主机IP（重要！解决Docker IP显示问题）
 # 复制环境变量模板
 cp .env.example .env  # Windows 用 copy .env.example .env
 # 编辑 .env 文件，将 HOST_IP 设置为你的局域网IP
 # Windows: 运行 ipconfig 查看你的局域网IP（通常是192.168.x.x）
 # macOS/Linux: 运行 ifconfig 或 ip addr 查看
 
+# 3. 启动服务
 docker-compose up -d
+
+# 4. 访问应用
+# 打开浏览器访问 http://localhost:7070
+# 或者使用局域网IP访问：http://192.168.1.100:7070
 ```
 
-**完成！** 打开 http://localhost:7070 即刻开传！现在显示的应该是你的真实局域网IP地址了！
+**完成！** 现在显示的应该是你的真实局域网IP地址了！
 
 ### 🔧 极客玩法
 
@@ -84,6 +90,32 @@ DOCKER_HOST_IP=192.168.1.100
 
 - Docker 镜像: https://hub.docker.com/r/zhong12138/lanshare
 - 项目地址: https://github.com/Danborad/lanshare
+
+## 🏷️ 版本发布
+
+- **GitHub Releases**: [查看最新版本](https://github.com/Danborad/lanshare/releases)
+- **Docker镜像**: `zhong12138/lanshare:latest`
+
+## 最近更新
+
+- **🐛 Docker IP显示修复**: 解决Docker容器中IP和二维码显示问题
+- **🚀 一键部署**: 提供自动IP检测的启动脚本
+- **📱 多平台支持**: Windows、Linux、macOS启动脚本
+- **⚡ 简化配置**: 预设IP地址，开箱即用
+
+## 开发计划
+
+- [ ] 用户认证系统
+- [ ] 文件加密功能
+- [ ] 批量上传支持
+- [ ] 移动端APP
+- [ ] 多语言支持
+
+## 版本历史
+
+- **v1.2.0** (2024-12-19): Docker IP显示修复，一键部署
+- **v1.1.0** (2024-12-18): Docker支持，自动清理
+- **v1.0.0** (2024-12-17): 首次发布
 
 ---
 

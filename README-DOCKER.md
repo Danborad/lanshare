@@ -13,6 +13,8 @@ docker run -d \
   -v $(pwd)/data:/app/data \
   -e DOCKER_CONTAINER=true \
   -e HOST_IP=192.168.1.100 \
+  -e DOCKER_HOST_IP=192.168.1.100 \
+  --restart unless-stopped \
   zhong12138/lanshare:latest
 ```
 
@@ -22,15 +24,14 @@ docker run -d \
 mkdir lanshare && cd lanshare
 
 # 下载配置文件和IP设置模板
-curl -o docker-compose.yml https://raw.githubusercontent.com/Danborad/lanshare/master/docker-compose-ready.yml
-curl -o .env.example https://raw.githubusercontent.com/Danborad/lanshare/master/.env.example
+curl -o docker-compose.yml https://raw.githubusercontent.com/zhong12138/lanshare-v1/main/docker-compose.yml
 
-# 设置你的局域网IP
-cp .env.example .env  # Windows用 copy .env.example .env
-# 编辑 .env 文件，将 HOST_IP 设置为你的局域网IP
-
-# 启动
+# 一键启动服务（已预设IP为192.168.1.100）
 docker-compose up -d
+
+# 访问应用
+# 本地: http://localhost:7070
+# 局域网: http://192.168.1.100:7070
 ```
 
 ### 3. 配置宿主机IP（解决IP显示问题）
@@ -50,12 +51,14 @@ docker run -d \
   -v $(pwd)/uploads:/app/uploads \
   -v $(pwd)/data:/app/data \
   -e HOST_IP=192.168.1.100 \
+  -e DOCKER_HOST_IP=192.168.1.100 \
+  --restart unless-stopped \
   zhong12138/lanshare:latest
 
 # 方法2: Docker Compose（推荐）
-# 创建.env文件
-echo "HOST_IP=192.168.1.100" > .env
-echo "DOCKER_HOST_IP=192.168.1.100" >> .env
+# 项目已预设IP，如需修改：
+echo "HOST_IP=你的实际局域网IP" > .env
+echo "DOCKER_HOST_IP=你的实际局域网IP" >> .env
 ```
 
 ## ✨ 核心特性

@@ -62,8 +62,13 @@ jobs:
         # 检查镜像详情
         docker inspect $IMAGE_NAME_LOWER
         
-        # 启动容器并等待服务就绪
-        docker run -d -p 7070:7070 --name test $IMAGE_NAME_LOWER
+        # 启动容器并等待服务就绪（包含IP环境变量测试）
+        docker run -d \
+          -p 7070:7070 \
+          -e HOST_IP=127.0.0.1 \
+          -e DOCKER_HOST_IP=127.0.0.1 \
+          --name test \
+          $IMAGE_NAME_LOWER
         
         # 检查容器状态
         echo "Container status:"

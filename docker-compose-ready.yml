@@ -1,4 +1,5 @@
-version: '3.8'
+version: "3.8"
+
 services:
   lanshare:
     image: zhong12138/lanshare:latest
@@ -9,7 +10,6 @@ services:
       - ./data:/app/data
     restart: unless-stopped
     environment:
-      - FLASK_ENV=production
       - DOCKER_CONTAINER=true
-      - HOST_IP=${HOST_IP:-}
-      - DOCKER_HOST_IP=${DOCKER_HOST_IP:-}
+      - HOST_IP=192.168.1.100
+      - DOCKER_HOST_IP=192.168.1.100

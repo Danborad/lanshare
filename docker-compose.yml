@@ -1,5 +1,5 @@
 # LanShare - 局域网文件共享
-version: '3.8'
+version: "3.8"
 
 services:
   lanshare:
@@ -12,6 +12,8 @@ services:
     restart: unless-stopped
     environment:
       - FLASK_ENV=production
+      - HOST_IP=192.168.1.100
+      - DOCKER_HOST_IP=192.168.1.100
       - DOCKER_CONTAINER=true
       - HOST_IP=${HOST_IP:-}
       - DOCKER_HOST_IP=${DOCKER_HOST_IP:-}

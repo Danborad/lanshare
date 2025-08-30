@@ -25,6 +25,9 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
     - name: Extract metadata
       id: meta
       uses: docker/metadata-action@v5
@@ -41,8 +44,8 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        load: true  # 加载到本地Docker守护进程
-        platforms: linux/amd64,linux/arm64  # 支持多架构
+        load: true  # 加载到本地Docker守护进程（单平台测试）
+        platforms: linux/amd64  # 测试阶段只构建AMD64
         tags: ${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:test
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha

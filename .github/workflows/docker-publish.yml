@@ -2,10 +2,10 @@ name: Build, Test and Publish Docker Image
 
 on:
   push:
-    branches: [ main, master ]
-    tags: [ 'v*' ]
+    branches: [main, master]
+    tags: ["v*"]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
 
 env:
   REGISTRY: docker.io
@@ -19,146 +19,146 @@ jobs:
       packages: write
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=semver,pattern={{version}}
-          type=semver,pattern={{major}}.{{minor}}
-          type=raw,value=latest,enable={{is_default_branch}}
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
 
-    - name: Build Docker image for testing
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        load: true  # 加载到本地Docker守护进程（单平台测试）
-        platforms: linux/amd64  # 测试阶段只构建AMD64
-        tags: ${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:test
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      - name: Build Docker image for testing
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true # 加载到本地Docker守护进程（单平台测试）
+          platforms: linux/amd64 # 测试阶段只构建AMD64
+          tags: ${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:test
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-    - name: Test local Docker image
-      run: |
-        # 使用本地构建的镜像进行测试
-        IMAGE_NAME="${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:test"
-        IMAGE_NAME_LOWER=$(echo "$IMAGE_NAME" | tr '[:upper:]' '[:lower:]')
-        
-        echo "Testing local image: $IMAGE_NAME_LOWER"
-        
-        # 检查本地镜像
-        echo "Available local images:"
-        docker images | grep lanshare || echo "No lanshare images found"
-        
-        # 检查镜像详情
-        docker inspect $IMAGE_NAME_LOWER
-        
-        # 启动容器并等待服务就绪（包含IP环境变量测试）
-        docker run -d \
-          -p 7070:7070 \
-          -e HOST_IP=127.0.0.1 \
-          -e DOCKER_HOST_IP=127.0.0.1 \
-          --name test \
-          $IMAGE_NAME_LOWER
-        
-        # 检查容器状态
-        echo "Container status:"
-        docker ps -a
-        
-        # 等待容器启动并检查端口
-        for i in {1..30}; do
-          # 检查容器是否还在运行
-          if ! docker ps | grep -q test; then
-            echo "Container stopped unexpectedly"
-            docker logs test
-            docker rm test
-            exit 1
-          fi
-          
-          # 检查容器端口映射
-          echo "Port mapping:"
-          docker port test
-          
-          # 尝试连接服务
-          if curl -f http://localhost:7070/health 2>/dev/null; then
-            echo "Health check passed"
-            docker stop test && docker rm test
-            exit 0
-          elif curl -f http://localhost:7070 2>/dev/null; then
-            echo "Service is responding"
-            docker stop test && docker rm test
-            exit 0
-          else
-            echo "Waiting for service to start... ($i/30)"
-            echo "Container logs:"
-            docker logs test 2>/dev/null || true
-            echo "---"
-            sleep 2
-          fi
-        done
-        
-        echo "Service failed to start properly"
-        echo "Final container logs:"
-        docker logs test
-        echo "Container status:"
-        docker ps -a
-        echo "Container info:"
-        docker inspect test
-        docker stop test && docker rm test
-        exit 1
+      - name: Test local Docker image
+        run: |
+          # 使用本地构建的镜像进行测试
+          IMAGE_NAME="${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:test"
+          IMAGE_NAME_LOWER=$(echo "$IMAGE_NAME" | tr '[:upper:]' '[:lower:]')
 
-    - name: Log in to Docker Hub
-      if: github.event_name != 'pull_request'
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+          echo "Testing local image: $IMAGE_NAME_LOWER"
 
-    - name: Push Docker image
-      if: github.event_name != 'pull_request'
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        platforms: linux/amd64,linux/arm64  # 支持AMD64和ARM64架构
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+          # 检查本地镜像
+          echo "Available local images:"
+          docker images | grep lanshare || echo "No lanshare images found"
 
-    - name: Push version tag to Docker Hub
-      if: github.event_name != 'pull_request' && startsWith(github.ref, 'refs/tags/v')
-      run: |
-        # 提取版本号（去掉v前缀）
-        VERSION=${GITHUB_REF#refs/tags/v}
-        echo "Pushing version tag: $VERSION"
-        
-        # 从已构建的镜像中提取
-        SOURCE_IMAGE="${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest"
-        
-        # 创建版本标签
-        VERSION_IMAGE="${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:$VERSION"
-        
-        # 从Docker Hub拉取latest镜像
-        docker pull $SOURCE_IMAGE
-        
-        # 给镜像打上版本标签
-        docker tag $SOURCE_IMAGE $VERSION_IMAGE
-        
-        # 推送版本标签到Docker Hub
-        docker push $VERSION_IMAGE
-        
-        echo "✅ Successfully pushed version tag: $VERSION_IMAGE"
+          # 检查镜像详情
+          docker inspect $IMAGE_NAME_LOWER
+
+          # 启动容器并等待服务就绪（包含IP环境变量测试）
+          docker run -d \
+            -p 7070:7070 \
+            -e HOST_IP=127.0.0.1 \
+            -e DOCKER_HOST_IP=127.0.0.1 \
+            --name test \
+            $IMAGE_NAME_LOWER
+
+          # 检查容器状态
+          echo "Container status:"
+          docker ps -a
+
+          # 等待容器启动并检查端口
+          for i in {1..30}; do
+            # 检查容器是否还在运行
+            if ! docker ps | grep -q test; then
+              echo "Container stopped unexpectedly"
+              docker logs test
+              docker rm test
+              exit 1
+            fi
+            
+            # 检查容器端口映射
+            echo "Port mapping:"
+            docker port test
+            
+            # 尝试连接服务
+            if curl -f http://localhost:7070/health 2>/dev/null; then
+              echo "Health check passed"
+              docker stop test && docker rm test
+              exit 0
+            elif curl -f http://localhost:7070 2>/dev/null; then
+              echo "Service is responding"
+              docker stop test && docker rm test
+              exit 0
+            else
+              echo "Waiting for service to start... ($i/30)"
+              echo "Container logs:"
+              docker logs test 2>/dev/null || true
+              echo "---"
+              sleep 2
+            fi
+          done
+
+          echo "Service failed to start properly"
+          echo "Final container logs:"
+          docker logs test
+          echo "Container status:"
+          docker ps -a
+          echo "Container info:"
+          docker inspect test
+          docker stop test && docker rm test
+          exit 1
+
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push Docker image
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64 # 支持AMD64和ARM64架构
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Push version tag to Docker Hub
+        if: github.event_name != 'pull_request' && startsWith(github.ref, 'refs/tags/v')
+        run: |
+          # 提取版本号（去掉v前缀）
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "Pushing version tag: $VERSION"
+
+          # 从已构建的镜像中提取
+          SOURCE_IMAGE="${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest"
+
+          # 创建版本标签
+          VERSION_IMAGE="${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:$VERSION"
+
+          # 从Docker Hub拉取latest镜像
+          docker pull $SOURCE_IMAGE
+
+          # 给镜像打上版本标签
+          docker tag $SOURCE_IMAGE $VERSION_IMAGE
+
+          # 推送版本标签到Docker Hub
+          docker push $VERSION_IMAGE
+
+          echo "✅ Successfully pushed version tag: $VERSION_IMAGE"

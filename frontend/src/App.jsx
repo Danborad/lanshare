@@ -109,9 +109,8 @@ function App() {
         const data = await response.json()
         
         if (data.passwordEnabled) {
-          // 如果启用了密码，设置认证状态
-          localStorage.setItem('lanshare_auth', 'authenticated')
-          setIsAuthenticated(true)
+          // 如果启用了密码，显示密码验证界面
+          setShowPasswordAuth(true)
         } else {
           setIsAuthenticated(true)
         }
@@ -125,6 +124,8 @@ function App() {
   const handleAuthenticated = () => {
     setShowPasswordAuth(false)
     setIsAuthenticated(true)
+    // 重新加载页面以确保所有API调用都使用新的认证状态
+    window.location.reload()
   }
 
   return (

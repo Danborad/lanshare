@@ -68,6 +68,11 @@ def check_password_auth():
     # 跳过密码设置更新端点（需要特殊处理）
     if path == '/api/settings/password' and request.method == 'PUT':
         return None
+    # 跳过聊天相关端点（需要密码验证但由前端处理）
+    if path == '/api/messages' and request.method in ['GET', 'POST']:
+        return None
+    if path == '/api/messages/file' and request.method == 'POST':
+        return None
     # 跳过聊天文件预览和下载端点（公开访问）
     if path.startswith('/api/messages/') and path.endswith('/file/preview'):
         return None

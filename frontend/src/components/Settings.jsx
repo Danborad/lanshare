@@ -16,6 +16,9 @@ const Settings = ({ onClose }) => {
   const [currentPassword, setCurrentPassword] = useState('')
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [isModifyingPassword, setIsModifyingPassword] = useState(false)
+  const [refreshLockEnabled, setRefreshLockEnabled] = useState(false)
+  const [showRefreshLockVerify, setShowRefreshLockVerify] = useState(false)
+  const [hasPasswordSet, setHasPasswordSet] = useState(false)
 
   // 加载当前密码设置
   useEffect(() => {
@@ -24,6 +27,8 @@ const Settings = ({ onClose }) => {
         const response = await fetch('/api/settings')
         const data = await response.json()
         setIsPasswordMode(data.passwordEnabled || false)
+        setRefreshLockEnabled(data.refreshLockEnabled || false)
+        setHasPasswordSet(data.passwordEnabled || false) // 如果密码保护启用，说明密码已设置
       } catch (error) {
         console.error('加载密码设置失败:', error)
       }
@@ -43,6 +48,18 @@ const Settings = ({ onClose }) => {
     }
     setPassword('')
     setConfirmPassword('')
+  }
+
+  // 处理刷新锁定设置修改
+  const handleRefreshLockToggle = (newValue) => {
+    if (isPasswordMode && hasPasswordSet) {
+      // 如果密码保护已启用且密码已设置，需要验证当前密码
+      setShowRefreshLockVerify(true)
+      setCurrentPassword('')
+    } else {
+      // 如果密码保护未启用或密码未设置，直接修改
+      setRefreshLockEnabled(newValue)
+    }
   }
 
   // 验证当前密码并关闭密码保护
@@ -75,6 +92,7 @@ const Settings = ({ onClose }) => {
         setCurrentPassword('')
         setPassword('')
         setConfirmPassword('')
+        setHasPasswordSet(false) // 密码保护已关闭
         onClose()
       } else {
         toast.error(data.error || '密码错误')
@@ -126,6 +144,7 @@ const Settings = ({ onClose }) => {
         setConfirmPassword('')
         setCurrentPassword('')
         setIsModifyingPassword(false)
+        setHasPasswordSet(true) // 密码修改成功，确保状态正确
         onClose()
       } else {
         toast.error(modifyData.error || '修改密码失败')
@@ -133,6 +152,46 @@ const Settings = ({ onClose }) => {
     } catch (error) {
       console.error('修改密码失败:', error)
       toast.error('修改密码失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 验证密码并更新刷新锁定设置
+  const handleVerifyAndUpdateRefreshLock = async () => {
+    if (!currentPassword) {
+      toast.error('请输入当前密码')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const response = await fetch('/api/settings/password', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          passwordEnabled: isPasswordMode,
+          password: null, // 不修改密码
+          refreshLockEnabled: !refreshLockEnabled, // 切换刷新锁定设置
+          currentPassword: currentPassword
+        })
+      })
+
+      const data = await response.json()
+      
+      if (response.ok) {
+        setRefreshLockEnabled(!refreshLockEnabled)
+        setCurrentPassword('')
+        setShowRefreshLockVerify(false)
+        toast.success('设置已更新')
+      } else {
+        toast.error(data.error || '更新失败')
+      }
+    } catch (error) {
+      console.error('更新刷新锁定设置失败:', error)
+      toast.error('更新失败')
     } finally {
       setLoading(false)
     }
@@ -159,7 +218,9 @@ const Settings = ({ onClose }) => {
         },
         body: JSON.stringify({
           passwordEnabled: isPasswordMode,
-          password: isPasswordMode ? password : null
+          password: isPasswordMode ? password : null,
+          refreshLockEnabled: refreshLockEnabled,
+          currentPassword: currentPassword || undefined
         })
       })
 
@@ -169,6 +230,7 @@ const Settings = ({ onClose }) => {
         toast.success('设置已保存')
         setPassword('')
         setConfirmPassword('')
+        setHasPasswordSet(isPasswordMode) // 更新密码设置状态
         onClose()
       } else {
         toast.error(data.error || '保存失败')
@@ -232,6 +294,33 @@ const Settings = ({ onClose }) => {
               </div>
             </label>
           </div>
+
+          {/* 刷新立即锁定开关 */}
+          {isPasswordMode && (
+            <div>
+              <label className="flex items-center justify-between cursor-pointer">
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">刷新立即锁定</span>
+                  <span className="text-xs text-muted-foreground">启用后，每次刷新浏览器都需要重新验证密码</span>
+                </div>
+                <div className="relative flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={refreshLockEnabled}
+                    onChange={(e) => handleRefreshLockToggle(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <div className={`w-11 h-6 rounded-full transition-colors ${
+                    refreshLockEnabled ? 'bg-primary' : 'bg-gray-200'
+                  }`}>
+                    <div className={`w-5 h-5 bg-white rounded-full transition-transform transform ${
+                      refreshLockEnabled ? 'translate-x-5' : 'translate-x-0.5'
+                    } mt-0.5`} />
+                  </div>
+                </div>
+              </label>
+            </div>
+          )}
 
           {/* 修改密码按钮 */}
           {isPasswordMode && !isModifyingPassword && (
@@ -469,6 +558,77 @@ const Settings = ({ onClose }) => {
                   className="flex-1 px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 disabled:opacity-50"
                 >
                   {loading ? '验证中...' : '确认关闭'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* 刷新锁定验证模态框 */}
+      {showRefreshLockVerify && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => setShowRefreshLockVerify(false)}
+        >
+          <motion.div
+            initial={{ y: -20 }}
+            animate={{ y: 0 }}
+            className="bg-card border border-border rounded-lg p-6 w-full max-w-sm mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">验证密码</h3>
+              <button
+                onClick={() => setShowRefreshLockVerify(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                修改刷新锁定设置需要验证当前密码
+              </p>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">当前密码</label>
+                <div className="relative">
+                  <input
+                    type={showCurrentPassword ? 'text' : 'password'}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="输入当前密码"
+                    className="w-full px-3 py-2 border border-border rounded-md bg-background"
+                    onKeyPress={(e) => e.key === 'Enter' && handleVerifyAndUpdateRefreshLock()}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  >
+                    {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowRefreshLockVerify(false)}
+                  className="flex-1 px-4 py-2 border border-border rounded-md hover:bg-accent transition-colors"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleVerifyAndUpdateRefreshLock}
+                  disabled={loading || !currentPassword}
+                  className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? '验证中...' : '确认'}
                 </button>
               </div>
             </div>

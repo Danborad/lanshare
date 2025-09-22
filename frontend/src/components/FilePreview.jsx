@@ -204,13 +204,13 @@ const FilePreview = ({ file, isOpen, onClose }) => {
     console.log('渲染图片预览:', file?.filename, '预览URL:', previewUrl)
     
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-full w-full">
         <motion.img
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           src={previewUrl}
           alt={file?.filename}
-          className={`max-w-full max-h-full object-contain ${isFullScreen ? 'w-full h-full' : ''}`}
+          className={`${isFullScreen ? 'w-full h-full object-contain' : 'w-full h-full object-contain'}`}
           crossOrigin="anonymous"
           loading="eager"
           decoding="async"
@@ -559,9 +559,9 @@ const FilePreview = ({ file, isOpen, onClose }) => {
 
           {/* 预览内容 */}
           <div className={`${
-            file?.file_type === 'video' || file?.file_type === 'audio' 
+            isFullScreen && file?.file_type === 'image' 
               ? 'h-full' 
-              : 'h-full'
+              : 'h-[calc(90vh-100px)]'
           }`}>
             {isLoading && !error && renderLoading()}
             {error && renderError()}

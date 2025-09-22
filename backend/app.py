@@ -68,11 +68,6 @@ def check_password_auth():
     # 跳过密码设置更新端点（需要特殊处理）
     if path == '/api/settings/password' and request.method == 'PUT':
         return None
-    # 跳过聊天相关端点（需要密码验证但由前端处理）
-    if path == '/api/messages' and request.method in ['GET', 'POST']:
-        return None
-    if path == '/api/messages/file' and request.method == 'POST':
-        return None
     # 跳过聊天文件预览和下载端点（公开访问）
     if path.startswith('/api/messages/') and path.endswith('/file/preview'):
         return None
@@ -1910,9 +1905,10 @@ def get_settings():
                 settings = json.load(f)
                 return jsonify({
                     'passwordEnabled': settings.get('passwordEnabled', False),
-                    'setupCompleted': settings.get('setupCompleted', False)
+                    'setupCompleted': settings.get('setupCompleted', False),
+                    'refreshLockEnabled': settings.get('refreshLockEnabled', False)
                 })
-        return jsonify({'passwordEnabled': False, 'setupCompleted': False})
+        return jsonify({'passwordEnabled': False, 'setupCompleted': False, 'refreshLockEnabled': False})
     except Exception as e:
         print(f'获取设置失败: {e}')
         return jsonify({'error': '获取设置失败'}), 500
@@ -1951,6 +1947,7 @@ def update_password():
         password_enabled = data.get('passwordEnabled', False)
         password = data.get('password')
         current_password = data.get('currentPassword')
+        refresh_lock_enabled = data.get('refreshLockEnabled', False)
         
         settings_file = os.path.join(os.path.dirname(__file__), 'data', 'settings.json')
         
@@ -1977,6 +1974,7 @@ def update_password():
 
         # 更新设置
         settings['passwordEnabled'] = password_enabled
+        settings['refreshLockEnabled'] = refresh_lock_enabled
         
         if password_enabled and password:
             if len(password) < 4:

@@ -7,21 +7,21 @@ const api = axios.create({
 
 // 获取认证token
 export const getAuthToken = () => {
-  return localStorage.getItem('lanshare_auth')
+  return sessionStorage.getItem('lanshare_auth')
 }
 
 // 设置认证token
 export const setAuthToken = (token) => {
   if (token) {
-    localStorage.setItem('lanshare_auth', token)
+    sessionStorage.setItem('lanshare_auth', token)
   } else {
-    localStorage.removeItem('lanshare_auth')
+    sessionStorage.removeItem('lanshare_auth')
   }
 }
 
 // 清除认证token
 export const clearAuthToken = () => {
-  localStorage.removeItem('lanshare_auth')
+  sessionStorage.removeItem('lanshare_auth')
 }
 
 // 请求拦截器

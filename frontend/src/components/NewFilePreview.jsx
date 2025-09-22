@@ -278,7 +278,7 @@ const NewFilePreview = ({ file, isOpen, onClose }) => {
     if (!file || file.file_type !== 'image') return null;
     
     return (
-      <div className={`flex items-center justify-center ${isFullScreen ? 'h-screen' : 'h-full min-h-[400px]'}`}>
+      <div className={`flex items-center justify-center ${isFullScreen ? 'h-screen' : 'h-full'} w-full`}>
         <motion.img
           key={`${file.id}-${retryCount}`}
           ref={imageRef}
@@ -286,7 +286,7 @@ const NewFilePreview = ({ file, isOpen, onClose }) => {
           animate={{ opacity: 1, scale: 1 }}
           src={previewUrl}
           alt={file.filename}
-          className={`max-w-full max-h-full object-contain ${isFullScreen ? 'w-full h-full' : ''}`}
+          className={`${isFullScreen ? 'w-full h-full object-contain' : 'w-full h-full object-contain'}`}
           crossOrigin="anonymous"
           loading="eager"
           decoding="async"
@@ -638,7 +638,7 @@ const NewFilePreview = ({ file, isOpen, onClose }) => {
           )}
 
           {/* 内容区域 */}
-          <div className={`${isFullScreen ? 'h-full' : 'max-h-[calc(90vh-50px)]'} overflow-hidden relative`}>
+          <div className={`${isFullScreen ? 'h-full' : 'h-[calc(90vh-50px)]'} overflow-hidden relative`}>
             {/* 始终挂载媒体元素以便触发 onLoad/onError */}
             {renderContent()}
 

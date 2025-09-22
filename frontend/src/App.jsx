@@ -22,6 +22,7 @@ function App() {
   const [showPasswordAuth, setShowPasswordAuth] = useState(false)
   const [isSetupComplete, setIsSetupComplete] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [refreshLockEnabled, setRefreshLockEnabled] = useState(false)
 
   // 检测是否为移动设备
   useEffect(() => {
@@ -59,19 +60,37 @@ function App() {
         const response = await fetch('/api/settings')
         const data = await response.json()
         
+        // 保存刷新锁定设置
+        setRefreshLockEnabled(data.refreshLockEnabled || false)
+        
         if (data.passwordEnabled) {
-          // 检查是否已认证
-          const token = localStorage.getItem('lanshare_auth')
+          // 检查是否已认证 - 使用sessionStorage确保每个窗口独立验证
+          const token = sessionStorage.getItem('lanshare_auth')
+          
+          // 如果启用了刷新锁定，则每次都需要重新验证
+          if (data.refreshLockEnabled) {
+            setShowPasswordAuth(true)
+            return
+          }
+          
           if (token === 'authenticated') {
-            // 验证token有效性
+            // 验证token有效性 - 调用需要密码验证的API来确保认证有效
             try {
-              const verifyResponse = await fetch('/api/files')
-              if (verifyResponse.status === 401) {
-                setShowPasswordAuth(true)
-              } else {
+              const verifyResponse = await fetch('/api/files', {
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              })
+              if (verifyResponse.status === 200) {
                 setIsAuthenticated(true)
+              } else {
+                // 认证失败，清除token并显示密码验证
+                sessionStorage.removeItem('lanshare_auth')
+                setShowPasswordAuth(true)
               }
             } catch {
+              // 网络错误，清除token并显示密码验证
+              sessionStorage.removeItem('lanshare_auth')
               setShowPasswordAuth(true)
             }
           } else {
@@ -124,8 +143,6 @@ function App() {
   const handleAuthenticated = () => {
     setShowPasswordAuth(false)
     setIsAuthenticated(true)
-    // 重新加载页面以确保所有API调用都使用新的认证状态
-    window.location.reload()
   }
 
   return (

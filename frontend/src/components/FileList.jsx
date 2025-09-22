@@ -21,6 +21,7 @@ import { fileAPI, messageAPI } from '../utils/api'
 import { formatFileSize, formatTime } from '../utils'
 import { useSocket } from '../contexts/SocketContext'
 import toast from 'react-hot-toast'
+import FilePreview from './NewFilePreview'
 
 const FileList = ({ files, loading, onDelete, onUploadSuccess }) => {
   const [deleteConfirm, setDeleteConfirm] = useState(null)
@@ -43,6 +44,8 @@ const FileList = ({ files, loading, onDelete, onUploadSuccess }) => {
   const [senderName, setSenderName] = useState(() => {
     return localStorage.getItem('senderName') || '匿名用户'
   })
+  const [previewFile, setPreviewFile] = useState(null)
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const { currentChannel, socket } = useSocket()
 
   // 保存用户名
@@ -571,6 +574,21 @@ const FileList = ({ files, loading, onDelete, onUploadSuccess }) => {
 
                     {/* 操作按钮 */}
                     <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-2">
+                      {['image', 'video', 'audio'].includes(file.file_type) && (
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => {
+                            setPreviewFile(file)
+                            setIsPreviewOpen(true)
+                          }}
+                          className="p-2 md:p-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors w-8 h-8 md:w-auto md:h-auto flex items-center justify-center"
+                          title="预览文件"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </motion.button>
+                      )}
+                      
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -725,6 +743,16 @@ const FileList = ({ files, loading, onDelete, onUploadSuccess }) => {
           </p>
         </div>
       )}
+
+      {/* 文件预览组件 */}
+      <FilePreview 
+        file={previewFile}
+        isOpen={isPreviewOpen}
+        onClose={() => {
+          setIsPreviewOpen(false)
+          setPreviewFile(null)
+        }}
+      />
     </div>
   )
 }

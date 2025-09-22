@@ -13,16 +13,47 @@ import {
   Trash2,
   MoreVertical,
   Check,
-  XCircle
+  XCircle,
+  Globe,
+  User,
+  Download,
+  ExternalLink,
+  RefreshCw
 } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
 import { useSocket } from '../contexts/SocketContext'
 import toast from 'react-hot-toast'
+import { channelAPI, systemAPI } from '../utils/api'
 
-const Sidebar = ({ isMobile = false, onClose }) => {
+const Sidebar = ({ isMobile = false, onClose, onSettingsClick }) => {
   const { theme, toggleTheme } = useTheme()
   const { connected, currentChannel, joinChannel } = useSocket()
-  const [channels, setChannels] = useState(['default', '工作区', '生活区'])
+
+  // 频道列表状态 - 只使用全局模式
+  const [channels, setChannels] = useState(['default'])
+  const [loading, setLoading] = useState(false)
+
+  // 全局频道：从后端API获取
+  const loadGlobalChannels = async () => {
+    try {
+      setLoading(true)
+      const response = await channelAPI.getChannels()
+      // 正确访问响应数据 - axios响应格式
+      return response.channels || response.data?.channels || ['default']
+    } catch (error) {
+      console.error('获取全局频道失败:', error)
+      toast.error('获取频道列表失败')
+      return ['default']
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 初始化加载 - 只使用全局模式
+  useEffect(() => {
+    loadGlobalChannels().then(setChannels)
+  }, [])
+
   const [editingChannel, setEditingChannel] = useState(null)
   const [editingName, setEditingName] = useState('')
   const [showContextMenu, setShowContextMenu] = useState(null)
@@ -43,15 +74,34 @@ const Sidebar = ({ isMobile = false, onClose }) => {
     }
   }
 
-  // 添加新频道
-  const handleAddChannel = () => {
-    if (newChannelName.trim() && !channels.includes(newChannelName.trim())) {
-      setChannels([...channels, newChannelName.trim()])
+  // 添加新频道 - 只使用全局模式
+  const handleAddChannel = async () => {
+    const name = newChannelName.trim()
+    if (!name) {
+      toast.error('频道名称不能为空')
+      return
+    }
+
+    if (channels.includes(name)) {
+      toast.error('频道已存在')
+      return
+    }
+
+    try {
+      // 全局模式：调用后端API创建频道
+      await channelAPI.createChannel(name)
+      
+      // 重新加载频道列表
+      const updatedChannels = await loadGlobalChannels()
+      setChannels(updatedChannels)
+
       setNewChannelName('')
       setShowAddInput(false)
-      toast.success(`频道 "${newChannelName.trim()}" 已创建`)
-    } else if (channels.includes(newChannelName.trim())) {
-      toast.error('频道名称已存在')
+      toast.success(`频道 "${name}" 已创建`)
+      joinChannel(name)
+    } catch (error) {
+      console.error('创建频道失败:', error)
+      toast.error('创建频道失败')
     }
   }
 
@@ -63,24 +113,40 @@ const Sidebar = ({ isMobile = false, onClose }) => {
   }
 
   // 保存编辑
-  const saveEditChannel = () => {
-    if (editingName.trim() && editingName.trim() !== editingChannel) {
-      if (channels.includes(editingName.trim())) {
+  const saveEditChannel = async () => {
+    const newName = editingName.trim()
+    if (newName && newName !== editingChannel) {
+      if (channels.includes(newName)) {
         toast.error('频道名称已存在')
         return
       }
 
-      const updatedChannels = channels.map(ch =>
-        ch === editingChannel ? editingName.trim() : ch
-      )
-      setChannels(updatedChannels)
+      try {
+        // 调用后端API重命名频道
+        await channelAPI.renameChannel(editingChannel, newName)
+        
+        // 重新加载频道列表
+        const updatedChannels = await loadGlobalChannels()
+        setChannels(updatedChannels)
 
-      // 如果当前频道被重命名，更新当前频道
-      if (currentChannel === editingChannel) {
-        joinChannel(editingName.trim())
+        // 如果当前频道被重命名，更新当前频道
+        if (currentChannel === editingChannel) {
+          joinChannel(newName)
+        }
+
+        toast.success(`频道已重命名为 "${newName}"`)
+      } catch (error) {
+        console.error('重命名频道失败:', error)
+        if (error.response?.status === 401) {
+          // 处理未授权错误
+          toast.error('需要密码验证')
+          // 触发密码验证界面
+          localStorage.removeItem('lanshare_auth')
+          window.location.reload()
+        } else {
+          toast.error(error.message || '重命名频道失败')
+        }
       }
-
-      toast.success(`频道已重命名为 "${editingName.trim()}"`)
     }
     setEditingChannel(null)
     setEditingName('')
@@ -93,7 +159,7 @@ const Sidebar = ({ isMobile = false, onClose }) => {
   }
 
   // 删除频道
-  const deleteChannel = (channel) => {
+  const deleteChannel = async (channel) => {
     if (channel === 'default') {
       toast.error('默认列表不能删除')
       return
@@ -104,16 +170,33 @@ const Sidebar = ({ isMobile = false, onClose }) => {
       return
     }
 
-    const updatedChannels = channels.filter(ch => ch !== channel)
-    setChannels(updatedChannels)
+    try {
+      // 使用channelAPI删除频道，会自动包含认证头
+      await channelAPI.deleteChannel(channel)
+      
+      // 重新加载频道列表
+      const updatedChannels = await loadGlobalChannels()
+      setChannels(updatedChannels)
 
-    // 如果删除的是当前频道，切换到默认频道
-    if (currentChannel === channel) {
-      joinChannel('default')
+      // 如果删除的是当前频道，切换到默认频道
+      if (currentChannel === channel) {
+        joinChannel('default')
+      }
+
+      setShowContextMenu(null)
+      toast.success(`频道 "${getChannelDisplayName(channel)}" 已删除`)
+    } catch (error) {
+      console.error('删除频道失败:', error)
+      if (error.response?.status === 401) {
+        // 处理未授权错误
+        toast.error('需要密码验证')
+        // 触发密码验证界面
+        localStorage.removeItem('lanshare_auth')
+        window.location.reload()
+      } else {
+        toast.error(error.message || '删除频道失败')
+      }
     }
-
-    setShowContextMenu(null)
-    toast.success(`频道 "${getChannelDisplayName(channel)}" 已删除`)
   }
 
   // 右键菜单
@@ -131,14 +214,18 @@ const Sidebar = ({ isMobile = false, onClose }) => {
 
   // 版本信息状态
   const [version, setVersion] = useState('v1.0.0')
+  const [versionInfo, setVersionInfo] = useState(null)
+  const [updateInfo, setUpdateInfo] = useState(null)
+  const [checkingUpdate, setCheckingUpdate] = useState(false)
+  const [showUpdateModal, setShowUpdateModal] = useState(false)
 
   // 获取版本信息
   useEffect(() => {
     const fetchVersion = async () => {
       try {
-        const response = await fetch('/api/system/version')
-        const data = await response.json()
+        const data = await systemAPI.getVersion()
         setVersion(data.version || 'v1.0.0')
+        setVersionInfo(data)
       } catch (error) {
         console.error('获取版本信息失败:', error)
         setVersion('v1.0.0')
@@ -146,6 +233,23 @@ const Sidebar = ({ isMobile = false, onClose }) => {
     }
     fetchVersion()
   }, [])
+
+  // 检查更新
+  const handleCheckUpdate = async () => {
+    if (checkingUpdate) return
+    
+    setCheckingUpdate(true)
+    try {
+      const data = await systemAPI.checkUpdate()
+      setUpdateInfo(data)
+      setShowUpdateModal(true)
+    } catch (error) {
+      console.error('检查更新失败:', error)
+      toast.error('检查更新失败: ' + (error.message || '网络连接异常'))
+    } finally {
+      setCheckingUpdate(false)
+    }
+  }
 
   return (
     <div className={`bg-card border-r border-border flex flex-col ${isMobile ? 'w-80 h-full' : 'w-64 h-full'
@@ -195,6 +299,8 @@ const Sidebar = ({ isMobile = false, onClose }) => {
           </span>
         </div>
       </div>
+
+
 
       {/* 频道列表 */}
       <div className="flex-1 p-4 overflow-y-auto" onClick={handleClickOutside}>
@@ -370,25 +476,312 @@ const Sidebar = ({ isMobile = false, onClose }) => {
       {/* 底部操作 */}
       <div className="p-4 border-t border-border">
         <div className="flex justify-between items-center">
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={toggleTheme}
-            className="p-2 rounded-lg hover:bg-accent transition-colors"
-            title={theme === 'light' ? '切换到深色模式' : '切换到浅色模式'}
-          >
-            {theme === 'light' ? (
-              <Moon className="w-5 h-5" />
-            ) : (
-              <Sun className="w-5 h-5" />
-            )}
-          </motion.button>
-          
-          {/* 版本号显示 */}
-          <div className="text-xs text-muted-foreground">
-            {version}
+          <div className="flex items-center space-x-2">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleTheme}
+              className="p-2 rounded-lg hover:bg-accent transition-colors"
+              title={theme === 'light' ? '切换到深色模式' : '切换到浅色模式'}
+            >
+              {theme === 'light' ? (
+                <Moon className="w-5 h-5" />
+              ) : (
+                <Sun className="w-5 h-5" />
+              )}
+            </motion.button>
+            
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={onSettingsClick}
+              className="p-2 rounded-lg hover:bg-accent transition-colors"
+              title="设置"
+            >
+              <Settings className="w-5 h-5" />
+            </motion.button>
           </div>
+          
+          {/* 版本号显示 - 可点击检查更新 */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleCheckUpdate}
+            disabled={checkingUpdate}
+            className="flex items-center space-x-1 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            title="点击检查更新"
+          >
+            {checkingUpdate && <RefreshCw className="w-3 h-3 animate-spin" />}
+            <span>{version}</span>
+          </motion.button>
         </div>
       </div>
+
+      {/* 更新检查弹窗 */}
+      {showUpdateModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowUpdateModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-card border border-border rounded-xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">检查更新</h3>
+              <button
+                onClick={() => setShowUpdateModal(false)}
+                className="p-1 rounded-lg hover:bg-accent transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {updateInfo?.error ? (
+              <div className="text-center py-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <XCircle className="w-6 h-6 text-red-500" />
+                </div>
+                <p className="text-red-600 font-medium mb-2">检查更新失败</p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {updateInfo.message}
+                </p>
+                <button
+                  onClick={handleCheckUpdate}
+                  disabled={checkingUpdate}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                >
+                  {checkingUpdate ? '检查中...' : '重试'}
+                </button>
+              </div>
+            ) : updateInfo?.has_update ? (
+              <div className="text-center">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Download className="w-6 h-6 text-green-500" />
+                </div>
+                <p className="font-medium mb-2">发现新版本！</p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  当前版本: {updateInfo.current_version}
+                  <br />
+                  最新版本: <span className="text-green-600 font-medium">{updateInfo.latest_version}</span>
+                </p>
+                
+                {updateInfo.release_name && (
+                  <p className="text-sm font-medium mb-2">{updateInfo.release_name}</p>
+                )}
+                
+                {updateInfo.release_notes && (
+                  <div className="bg-accent/50 rounded-lg p-3 mb-4 text-left">
+                    <p className="text-xs text-muted-foreground mb-1">更新说明:</p>
+                    <p className="text-sm whitespace-pre-wrap max-h-32 overflow-y-auto">
+                      {updateInfo.release_notes}
+                    </p>
+                  </div>
+                )}
+                
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setShowUpdateModal(false)}
+                    className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-accent transition-colors"
+                  >
+                    稍后更新
+                  </button>
+                  {updateInfo.download_url && (
+                    <button
+                      onClick={() => window.open(updateInfo.download_url, '_blank')}
+                      className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center space-x-1"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span>立即更新</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : updateInfo?.mode === 'local' ? (
+              <div className="text-center py-4">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Globe className="w-6 h-6 text-blue-500" />
+                </div>
+                <p className="font-medium mb-2">本地部署版本</p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  当前版本: {updateInfo?.current_version || version}
+                  <br />
+                  {versionInfo?.build_date && (
+                    <span className="text-xs">构建时间: {versionInfo.build_date}</span>
+                  )}
+                </p>
+                {updateInfo.release_notes && (
+                  <div className="bg-accent/50 rounded-lg p-3 mb-4 text-left">
+                    <p className="text-xs text-muted-foreground mb-1">说明:</p>
+                    <p className="text-sm whitespace-pre-wrap max-h-32 overflow-y-auto">
+                      {updateInfo.release_notes}
+                    </p>
+                  </div>
+                )}
+                <button
+                  onClick={() => setShowUpdateModal(false)}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  知道了
+                </button>
+              </div>
+            ) : updateInfo?.mode === 'no_releases' ? (
+              <div className="text-center py-4">
+                <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Globe className="w-6 h-6 text-yellow-500" />
+                </div>
+                <p className="font-medium mb-2">开发版本</p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  当前版本: {updateInfo?.current_version || version}
+                  <br />
+                  {versionInfo?.build_date && (
+                    <span className="text-xs">构建时间: {versionInfo.build_date}</span>
+                  )}
+                </p>
+                {updateInfo.release_notes && (
+                  <div className="bg-accent/50 rounded-lg p-3 mb-4 text-left">
+                    <p className="text-xs text-muted-foreground mb-1">说明:</p>
+                    <p className="text-sm whitespace-pre-wrap max-h-32 overflow-y-auto">
+                      {updateInfo.release_notes}
+                    </p>
+                  </div>
+                )}
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setShowUpdateModal(false)}
+                    className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-accent transition-colors"
+                  >
+                    知道了
+                  </button>
+                  {updateInfo.download_url && (
+                    <button
+                      onClick={() => window.open(updateInfo.download_url, '_blank')}
+                      className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center space-x-1"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span>访问仓库</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : updateInfo?.mode === 'docker_hub' ? (
+              <div className="text-center">
+                <div className={`w-12 h-12 ${updateInfo.has_update ? 'bg-blue-100' : 'bg-green-100'} rounded-full flex items-center justify-center mx-auto mb-3`}>
+                  <Globe className={`w-6 h-6 ${updateInfo.has_update ? 'text-blue-500' : 'text-green-500'}`} />
+                </div>
+                <p className="font-medium mb-2">
+                  {updateInfo.has_update ? 'Docker Hub 发现新版本！' : 'Docker Hub 已是最新版本'}
+                </p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  当前版本: {updateInfo.current_version}
+                  {updateInfo.has_update && (
+                    <>
+                      <br />
+                      最新版本: <span className="text-blue-600 font-medium">{updateInfo.latest_version}</span>
+                    </>
+                  )}
+                </p>
+                
+                {updateInfo.release_notes && (
+                  <div className="bg-accent/50 rounded-lg p-3 mb-4 text-left">
+                    <p className="text-xs text-muted-foreground mb-1">Docker Hub 信息:</p>
+                    <p className="text-sm whitespace-pre-wrap max-h-32 overflow-y-auto">
+                      {updateInfo.release_notes}
+                    </p>
+                  </div>
+                )}
+                
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setShowUpdateModal(false)}
+                    className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-accent transition-colors"
+                  >
+                    {updateInfo.has_update ? '稍后更新' : '知道了'}
+                  </button>
+                  {updateInfo.download_url && (
+                    <button
+                      onClick={() => window.open(updateInfo.download_url, '_blank')}
+                      className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center space-x-1"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span>查看镜像</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : updateInfo?.mode === 'github_tags' ? (
+              <div className="text-center">
+                <div className={`w-12 h-12 ${updateInfo.has_update ? 'bg-purple-100' : 'bg-green-100'} rounded-full flex items-center justify-center mx-auto mb-3`}>
+                  <Globe className={`w-6 h-6 ${updateInfo.has_update ? 'text-purple-500' : 'text-green-500'}`} />
+                </div>
+                <p className="font-medium mb-2">
+                  {updateInfo.has_update ? 'GitHub 发现新标签！' : 'GitHub Tags 已是最新版本'}
+                </p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  当前版本: {updateInfo.current_version}
+                  {updateInfo.has_update && (
+                    <>
+                      <br />
+                      最新版本: <span className="text-purple-600 font-medium">{updateInfo.latest_version}</span>
+                    </>
+                  )}
+                </p>
+                
+                {updateInfo.release_notes && (
+                  <div className="bg-accent/50 rounded-lg p-3 mb-4 text-left">
+                    <p className="text-xs text-muted-foreground mb-1">GitHub Tags 信息:</p>
+                    <p className="text-sm whitespace-pre-wrap max-h-32 overflow-y-auto">
+                      {updateInfo.release_notes}
+                    </p>
+                  </div>
+                )}
+                
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setShowUpdateModal(false)}
+                    className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-accent transition-colors"
+                  >
+                    {updateInfo.has_update ? '稍后更新' : '知道了'}
+                  </button>
+                  {updateInfo.download_url && (
+                    <button
+                      onClick={() => window.open(updateInfo.download_url, '_blank')}
+                      className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center space-x-1"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span>查看标签</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Check className="w-6 h-6 text-green-500" />
+                </div>
+                <p className="font-medium mb-2">已是最新版本</p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  当前版本: {updateInfo?.current_version || version}
+                  <br />
+                  {versionInfo?.build_date && (
+                    <span className="text-xs">构建时间: {versionInfo.build_date}</span>
+                  )}
+                </p>
+                <button
+                  onClick={() => setShowUpdateModal(false)}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  知道了
+                </button>
+              </div>
+            )}
+          </motion.div>
+        </motion.div>
+      )}
     </div>
   )
 }

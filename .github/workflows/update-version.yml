@@ -1,0 +1,63 @@
+name: Update Version File
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "手动指定版本号 (例如: v1.2.0)"
+        required: false
+        type: string
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Update VERSION file from release
+        if: github.event_name == 'release'
+        run: |
+          echo "LanShare ${{ github.event.release.tag_name }}" > VERSION
+          echo "Build: $(date +'%Y-%m-%d')" >> VERSION
+          echo "Platform: Docker" >> VERSION
+
+      - name: Update VERSION file manually
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          if [ -z "$VERSION" ]; then
+            echo "❌ 请提供版本号"
+            exit 1
+          fi
+          echo "LanShare $VERSION" > VERSION
+          echo "Build: $(date +'%Y-%m-%d')" >> VERSION
+          echo "Platform: Docker" >> VERSION
+
+      - name: Show updated VERSION
+        run: |
+          echo "📦 更新后的VERSION文件内容:"
+          cat VERSION
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add VERSION
+          if git diff --staged --quiet; then
+            echo "📝 VERSION文件没有变化"
+          else
+            git commit -m "🔖 Update VERSION file to $(head -1 VERSION | cut -d' ' -f2-)"
+            git push
+            echo "✅ VERSION文件已更新并推送"
+          fi

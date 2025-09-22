@@ -32,7 +32,12 @@ class Message(Base):
     sender_name = Column(String(100), default='匿名用户')
     send_time = Column(DateTime, default=datetime.now)
     channel = Column(String(50), default='default')
-    message_type = Column(String(20), default='text')  # text, image
+    message_type = Column(String(20), default='text')  # text, file, image
+    file_id = Column(Integer, nullable=True)  # 关联的文件ID（用于传输列表文件）
+    file_path = Column(String(500), nullable=True)  # 聊天文件的直接路径
+    file_name = Column(String(255), nullable=True)  # 文件名
+    file_size = Column(Integer, nullable=True)  # 文件大小
+    file_type = Column(String(50), nullable=True)  # 文件类型
     is_deleted = Column(Boolean, default=False)
 
 def init_db(database_path):

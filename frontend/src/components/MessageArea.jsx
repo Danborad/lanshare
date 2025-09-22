@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Send, Image, Paperclip, Smile, Copy, Check, Trash2 } from 'lucide-react'
+import { Send, Image, Paperclip, Smile, Copy, Check, Trash2, X, Download, Eye } from 'lucide-react'
 import { messageAPI } from '../utils/api'
 import { useSocket } from '../contexts/SocketContext'
-import { formatTime } from '../utils'
+import { formatTime, formatFileSize } from '../utils'
 import toast from 'react-hot-toast'
+import NewFilePreview from './NewFilePreview'
 
 const MessageArea = ({ messages, onSendMessage }) => {
   const [newMessage, setNewMessage] = useState('')
@@ -14,8 +15,13 @@ const MessageArea = ({ messages, onSendMessage }) => {
   const [copiedMessageId, setCopiedMessageId] = useState(null)
   const [deletingMessageId, setDeletingMessageId] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [selectedFiles, setSelectedFiles] = useState([])
+  const [uploading, setUploading] = useState(false)
+  const [previewFile, setPreviewFile] = useState(null)
   const messagesEndRef = useRef(null)
   const messagesContainerRef = useRef(null)
+  const fileInputRef = useRef(null)
+  const imageInputRef = useRef(null)
   const { currentChannel, socket } = useSocket()
 
   // 自动滚动到底部（仅在消息容器内部滚动）
@@ -57,84 +63,17 @@ const MessageArea = ({ messages, onSendMessage }) => {
   // 复制消息到剪贴板
   const copyMessage = async (messageContent, messageId) => {
     try {
-      // 方法1: 使用现代 Clipboard API
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(messageContent)
-        setCopiedMessageId(messageId)
-        toast.success('已复制到剪贴板')
-        
-        // 2秒后清除复制状态
-        setTimeout(() => {
-          setCopiedMessageId(null)
-        }, 2000)
-        return
-      }
-      
-      // 方法2: 使用 document.execCommand (兼容性更好)
-      const textArea = document.createElement('textarea')
-      textArea.value = messageContent
-      textArea.style.position = 'fixed'
-      textArea.style.left = '-999999px'
-      textArea.style.top = '-999999px'
-      document.body.appendChild(textArea)
-      textArea.focus()
-      textArea.select()
-      
-      const successful = document.execCommand('copy')
-      document.body.removeChild(textArea)
-      
-      if (successful) {
-        setCopiedMessageId(messageId)
-        toast.success('已复制到剪贴板')
-        
-        // 2秒后清除复制状态
-        setTimeout(() => {
-          setCopiedMessageId(null)
-        }, 2000)
-        return
-      }
-      
-      // 方法3: 回退到手动选择
-      throw new Error('execCommand failed')
-      
+      await navigator.clipboard.writeText(messageContent)
+      setCopiedMessageId(messageId)
+      toast.success('已复制到剪贴板')
+
+      // 2秒后清除复制状态
+      setTimeout(() => {
+        setCopiedMessageId(null)
+      }, 2000)
     } catch (error) {
       console.error('复制失败:', error)
-      
-      // 最后的回退方案：手动选择文本并提示用户
-      try {
-        const textArea = document.createElement('textarea')
-        textArea.value = messageContent
-        textArea.style.position = 'fixed'
-        textArea.style.left = '50%'
-        textArea.style.top = '50%'
-        textArea.style.transform = 'translate(-50%, -50%)'
-        textArea.style.zIndex = '9999'
-        textArea.style.width = '300px'
-        textArea.style.height = '150px'
-        textArea.style.border = '2px solid #ccc'
-        textArea.style.borderRadius = '8px'
-        textArea.style.padding = '10px'
-        textArea.style.fontSize = '14px'
-        textArea.style.backgroundColor = 'white'
-        textArea.style.color = 'black'
-        
-        document.body.appendChild(textArea)
-        textArea.focus()
-        textArea.select()
-        
-        toast.success('文本已选择，请按 Ctrl+C 复制', { duration: 4000 })
-        
-        // 3秒后自动移除
-        setTimeout(() => {
-          if (document.body.contains(textArea)) {
-            document.body.removeChild(textArea)
-          }
-        }, 3000)
-        
-      } catch (fallbackError) {
-        console.error('回退方案也失败:', fallbackError)
-        toast.error('复制失败，请手动选择复制')
-      }
+      toast.error('复制失败，请手动选择复制')
     }
   }
 
@@ -185,6 +124,151 @@ const MessageArea = ({ messages, onSendMessage }) => {
       e.preventDefault()
       handleSendMessage(e)
     }
+  }
+
+  // 处理文件选择
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files)
+    if (files.length > 0) {
+      setSelectedFiles(files)
+    }
+  }
+
+  // 处理图片选择
+  const handleImageSelect = (e) => {
+    const files = Array.from(e.target.files)
+    if (files.length > 0) {
+      setSelectedFiles(files)
+    }
+  }
+
+  // 移除选中的文件
+  const removeSelectedFile = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  // 发送文件消息
+  const handleSendFiles = async () => {
+    if (selectedFiles.length === 0) return
+
+    setUploading(true)
+    try {
+      for (const file of selectedFiles) {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('channel', currentChannel)
+        formData.append('sender_name', senderName)
+        formData.append('message_content', newMessage.trim() || `发送了文件: ${file.name}`)
+
+        await messageAPI.sendFileMessage(formData)
+      }
+
+      setSelectedFiles([])
+      setNewMessage('')
+      onSendMessage && onSendMessage()
+      toast.success(`成功发送 ${selectedFiles.length} 个文件`)
+
+    } catch (error) {
+      console.error('发送文件失败:', error)
+      toast.error('发送文件失败')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  // 渲染文件消息
+  const renderFileMessage = (message) => {
+    const fileType = message.file_type || 'unknown'
+    const fileName = message.file_name || '未知文件'
+    const fileSize = message.file_size || 0
+    
+    const isImage = fileType.includes('image')
+    const isVideo = fileType.includes('video')
+    const isAudio = fileType.includes('audio')
+
+    return (
+      <div className="mt-2 p-3 bg-gray-50 rounded-lg border">
+        <div className="flex items-center space-x-3">
+          {/* 文件图标或预览 */}
+          <div className="flex-shrink-0">
+            {isImage ? (
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Image className="w-6 h-6 text-blue-600" />
+              </div>
+            ) : isVideo ? (
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+              </div>
+            ) : isAudio ? (
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
+                </svg>
+              </div>
+            ) : (
+              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                <Paperclip className="w-6 h-6 text-gray-600" />
+              </div>
+            )}
+          </div>
+
+          {/* 文件信息 */}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900 truncate">{fileName}</p>
+            <p className="text-xs text-gray-500">{formatFileSize(fileSize)} • {fileType}</p>
+          </div>
+
+          {/* 操作按钮 */}
+          <div className="flex items-center space-x-1">
+            {(isImage || isVideo || isAudio) && (
+              <button
+                onClick={() => setPreviewFile({
+                  id: message.id,  // 使用消息ID而不是文件ID
+                  filename: fileName,
+                  file_type: isImage ? 'image' : isVideo ? 'video' : 'audio',
+                  file_size: fileSize,
+                  original_filename: fileName,
+                  is_chat_file: true  // 标记为聊天文件
+                })}
+                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                title="预览"
+              >
+                <Eye size={16} />
+              </button>
+            )}
+            
+            <a
+              href={`/api/messages/${message.id}/file/download`}
+              className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+              title="下载"
+            >
+              <Download size={16} />
+            </a>
+          </div>
+        </div>
+
+        {/* 图片预览 */}
+        {isImage && message.id && (
+          <div className="mt-3">
+            <img
+              src={`/api/messages/${message.id}/file/preview`}
+              alt={fileName}
+              className="max-w-full h-auto max-h-64 rounded-lg border cursor-pointer"
+              onClick={() => setPreviewFile({
+                id: message.id,  // 使用消息ID
+                filename: fileName,
+                file_type: 'image',
+                file_size: fileSize,
+                original_filename: fileName,
+                is_chat_file: true  // 标记为聊天文件
+              })}
+            />
+          </div>
+        )}
+      </div>
+    )
   }
 
   const handleImagePaste = async (e) => {
@@ -269,9 +353,18 @@ const MessageArea = ({ messages, onSendMessage }) => {
                       </div>
 
                       <div className="prose prose-sm max-w-none">
-                        <p className="text-foreground whitespace-pre-wrap break-words text-sm md:text-base">
-                          {message.content}
-                        </p>
+                        {message.message_type === 'file' ? (
+                          <div className="space-y-2">
+                            <p className="text-foreground text-sm md:text-base">
+                              {message.content}
+                            </p>
+                            {renderFileMessage(message)}
+                          </div>
+                        ) : (
+                          <p className="text-foreground whitespace-pre-wrap break-words text-sm md:text-base">
+                            {message.content}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -335,37 +428,102 @@ const MessageArea = ({ messages, onSendMessage }) => {
 
             {/* 工具按钮 */}
             <div className="flex items-center space-x-1 md:space-x-2">
+              {/* 图片上传按钮 */}
               <button
                 type="button"
-                className="p-2 rounded-lg hover:bg-accent transition-colors hidden md:block"
+                className="p-2 rounded-lg hover:bg-accent transition-colors"
                 title="上传图片"
-                onClick={() => toast.success('图片上传功能开发中...')}
+                onClick={() => imageInputRef.current?.click()}
               >
                 <Image className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
               </button>
 
+              {/* 文件上传按钮 */}
               <button
                 type="button"
-                className="p-2 rounded-lg hover:bg-accent transition-colors hidden md:block"
+                className="p-2 rounded-lg hover:bg-accent transition-colors"
                 title="添加附件"
-                onClick={() => toast.success('附件功能开发中...')}
+                onClick={() => fileInputRef.current?.click()}
               >
                 <Paperclip className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
               </button>
 
+              {/* 发送按钮 */}
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 type="submit"
-                disabled={!newMessage.trim()}
+                disabled={(!newMessage.trim() && selectedFiles.length === 0) || uploading}
                 className="p-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                onClick={selectedFiles.length > 0 ? (e) => { e.preventDefault(); handleSendFiles(); } : undefined}
               >
-                <Send className="w-4 h-4 md:w-5 md:h-5" />
+                {uploading ? (
+                  <div className="w-4 h-4 md:w-5 md:h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4 md:w-5 md:h-5" />
+                )}
               </motion.button>
             </div>
           </form>
 
-          <p className="text-xs text-muted-foreground mt-2 hidden md:block">
+          {/* 隐藏的文件输入框 */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            multiple
+            onChange={handleFileSelect}
+            accept="*/*"
+          />
+
+          <input
+            ref={imageInputRef}
+            type="file"
+            className="hidden"
+            multiple
+            onChange={handleImageSelect}
+            accept="image/*"
+          />
+
+          {/* 选中文件显示 */}
+          {selectedFiles.length > 0 && (
+            <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">
+                  已选择 {selectedFiles.length} 个文件
+                </span>
+                <button
+                  onClick={() => setSelectedFiles([])}
+                  className="text-xs text-gray-500 hover:text-red-600"
+                >
+                  清空
+                </button>
+              </div>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {selectedFiles.map((file, index) => (
+                  <div key={index} className="flex items-center space-x-2 text-sm">
+                    <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center flex-shrink-0">
+                      {file.type.startsWith('image/') ? (
+                        <Image className="w-3 h-3 text-blue-600" />
+                      ) : (
+                        <Paperclip className="w-3 h-3 text-blue-600" />
+                      )}
+                    </div>
+                    <span className="flex-1 truncate text-gray-700">{file.name}</span>
+                    <span className="text-xs text-gray-500">{formatFileSize(file.size)}</span>
+                    <button
+                      onClick={() => removeSelectedFile(index)}
+                      className="text-gray-400 hover:text-red-600 p-1"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <p className="text-xs text-muted-foreground mt-2">
             支持粘贴图片和文件拖拽
           </p>
         </div>
@@ -410,6 +568,13 @@ const MessageArea = ({ messages, onSendMessage }) => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* 文件预览组件 */}
+      <NewFilePreview
+        file={previewFile}
+        isOpen={!!previewFile}
+        onClose={() => setPreviewFile(null)}
+      />
     </div>
   )
 }

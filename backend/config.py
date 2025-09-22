@@ -3,7 +3,7 @@ from datetime import timedelta
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'lanshare-secret-key-2025')
-    UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', './uploads')
+    UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads'))
     DATABASE_PATH = os.environ.get('DATABASE_PATH', './data/lanshare.db')
     MAX_CONTENT_LENGTH = None  # 无文件大小限制
     
